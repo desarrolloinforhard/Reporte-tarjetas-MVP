@@ -26,16 +26,24 @@
 - Ocho fases y 72 subtareas cargadas en ClickUp.
 - Estrategia Git de dos ramas: `main` estable/protegida y `develop` para trabajo cotidiano.
 - PR #1 de fundación integrado a `main` mediante rebase.
+- Sistema visual claro/oscuro/sistema basado en la identidad de Inforhard S.R.L.
+- Componentes base: botón, campo, tarjeta, badge y estado informativo.
+- Shell responsive con sidebar de escritorio, rail de tablet y navegación inferior móvil.
+- Rutas universales para Inicio, Pagos, Liquidaciones, Conciliación, Calidad y Configuración.
+- Dashboard visual con fixtures explícitamente identificados como datos simulados.
+- Pantalla de configuración con selector de apariencia y diagnóstico público.
 
 ## Validación realizada
 
 - `npm run lint`: aprobado.
 - `npm run typecheck`: aprobado.
-- `npm run test`: 2 pruebas aprobadas.
+- `npm run test`: 4 pruebas aprobadas.
 - `npm run web:export`: aprobado.
 - Configuración pública de Expo: aprobada.
 - `npx expo-doctor`: 20/20 controles aprobados.
 - Node portátil `v22.23.1 x64` validado para el frontend.
+- Validación visual web: escritorio 1440 px, tablet 820 px y móvil 390 px.
+- Navegación móvil y cambio de tema verificados sin errores de consola.
 
 ## Runtime local
 
