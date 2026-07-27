@@ -4,27 +4,34 @@
 
 `main` debe estar protegida, estable y desplegable. Nadie trabaja directamente sobre ella.
 
-## Ramas
+## Rama de desarrollo
 
-Usar ramas cortas y enfocadas:
+`develop` es la única rama de trabajo e integración cotidiana. Nicolás y Misael
+publican allí commits pequeños y coherentes. No se crean ramas adicionales salvo
+autorización explícita de Nicolás.
 
-- `feat/nombre-breve` para funcionalidades.
-- `fix/nombre-breve` para correcciones.
-- `docs/nombre-breve` para documentación.
-- `codex/nombre-breve` para trabajo ejecutado desde Codex.
+Antes de comenzar o publicar:
 
-No mezclar módulos o refactors no relacionados en una misma rama.
+1. Confirmar que el árbol local no tenga cambios ajenos.
+2. Ejecutar `git pull --ff-only origin develop`.
+3. Coordinar módulos o archivos para evitar edición simultánea.
+4. Hacer commits descriptivos y acotados.
+5. Publicar sin `force push`.
 
-## Pull requests
+## Pull requests a main
 
-1. Actualizar la rama desde `main`.
+1. Confirmar que `develop` esté actualizada y estable.
 2. Ejecutar tipos, lint, pruebas y compilación web disponibles.
 3. Describir alcance, pruebas realizadas, plataformas verificadas y riesgos.
-4. Solicitar revisión cruzada.
+4. Abrir pull request de `develop` hacia `main`.
 5. Resolver comentarios y verificar nuevamente.
 6. Integrar solo con controles aprobados.
 
-Nicolás revisa los pull requests de Misael y Misael revisa los de Nicolás. Los cambios de contratos, autenticación, datos o despliegue requieren conformidad de ambos.
+Mientras Nicolás cubra temporalmente ambos roles, `quality` y la revisión del
+alcance son obligatorios, pero GitHub no exige una aprobación externa. Cuando
+Misael se incorpore, se activa nuevamente una aprobación cruzada obligatoria.
+Los cambios de contratos, autenticación, datos o despliegue requieren especial
+revisión antes de integrar.
 
 ## Commits
 
@@ -40,3 +47,4 @@ Preferir commits pequeños, coherentes y descriptivos:
 - No usar datos reales de clientes en pruebas o documentación.
 - No apuntar ramas de desarrollo a producción.
 - No realizar cambios desde este repositorio sobre `J:\Proyectos\ReportesTarjetas`.
+- No crear ramas adicionales ni forzar actualizaciones de `main` o `develop`.

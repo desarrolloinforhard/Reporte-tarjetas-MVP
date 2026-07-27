@@ -24,11 +24,14 @@ Este repositorio contiene el nuevo frontend universal de Reportes de Tarjetas. S
 ## Flujo de trabajo
 
 - `main` debe estar protegida, estable y desplegable. No se trabaja directamente sobre ella.
-- Crear ramas breves con prefijos `feat/`, `fix/` o `docs/`.
-- Cada cambio entra mediante pull request.
+- `develop` es la única rama de desarrollo e integración cotidiana.
+- No crear ramas adicionales salvo autorización explícita de Nicolás.
+- Los cambios se confirman y publican en `develop`.
+- Cada fase o entrega estable entra a `main` mediante pull request desde `develop`.
 - Todo pull request requiere revisión cruzada: Nicolás revisa cambios de Misael y Misael revisa cambios de Nicolás.
 - Antes de integrar, ejecutar los controles disponibles de tipos, lint, pruebas y compilación web.
-- Dividir el trabajo por módulo o responsabilidad para minimizar conflictos.
+- Antes de trabajar o publicar en `develop`, actualizar la rama y coordinar módulos para minimizar conflictos.
+- No usar `force push` en `main` ni `develop`.
 - No mezclar refactors no relacionados con una tarea funcional.
 
 ## Documentación operativa

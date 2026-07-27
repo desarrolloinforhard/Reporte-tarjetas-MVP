@@ -19,9 +19,9 @@ Ninguna de estas fuentes sustituye a las demás.
 
 ## Convención de trazabilidad
 
-1. Cada rama y pull request debe referenciar el ID de la subtarea de ClickUp.
-2. Una subtarea pasa a revisión cuando existe un pull request verificable.
-3. Solo pasa a completada después de revisión, controles automáticos y actualización
+1. Cada commit relevante en `develop` debe referenciar el ID de la subtarea de ClickUp.
+2. Una fase pasa a revisión cuando existe un pull request verificable de `develop` a `main`.
+3. Una subtarea solo pasa a completada después de revisión, controles automáticos y actualización
    de la matriz o documentación aplicable.
 4. No se crea una tarea por commit.
 5. La automatización debe ser idempotente: el mismo issue o pull request no puede

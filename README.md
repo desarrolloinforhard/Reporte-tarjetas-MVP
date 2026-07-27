@@ -64,9 +64,10 @@ npm run web:export
 
 ## Ramas
 
-- `main`: siempre integrable y protegida.
-- `feat/<tarea>`: funcionalidad.
-- `fix/<tarea>`: corrección.
-- `docs/<tarea>`: documentación.
+- `main`: estable, protegida y potencialmente publicable.
+- `develop`: desarrollo cotidiano e integración de todas las fases.
 
-Toda integración a `main` requiere pull request y revisión cruzada.
+No se crean ramas adicionales sin autorización explícita. Toda integración de
+`develop` a `main` requiere pull request, `quality` aprobado y revisión del
+alcance. Antes de publicar en `develop`, actualizar la rama y no usar
+`force push`.

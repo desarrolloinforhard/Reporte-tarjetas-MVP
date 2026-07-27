@@ -24,6 +24,8 @@
 - Keystore Android de este proyecto generada y administrada remotamente por EAS.
 - Plan inicial creado en ClickUp dentro de `IH DESARROLLO / Reporte Tarjetas MVP`.
 - Ocho fases y 72 subtareas cargadas en ClickUp.
+- Estrategia Git de dos ramas: `main` estable/protegida y `develop` para trabajo cotidiano.
+- PR #1 de fundación integrado a `main` mediante rebase.
 
 ## Validación realizada
 
