@@ -1,42 +1,59 @@
 {
   "expo": {
-    "name": "ReportesTarjetasApp",
-    "slug": "ReportesTarjetasApp",
-    "version": "1.0.0",
-    "orientation": "portrait",
-    "icon": "./assets/images/icon.png",
-    "scheme": "reportestarjetasapp",
+    "name": "Reportes de Tarjetas",
+    "slug": "reporte-tarjetas-mvp",
+    "owner": "nicolasets-team",
+    "description": "Reportes de tarjetas para clientes de Inforhard S.R.L",
+    "version": "0.1.0",
+    "platforms": ["ios", "android", "web"],
+    "icon": "./assets/branding/logo.png",
+    "scheme": "reportestarjetas",
     "userInterfaceStyle": "automatic",
     "ios": {
-      "icon": "./assets/expo.icon"
+      "icon": "./assets/branding/logo.png",
+      "bundleIdentifier": "com.inforhard.reportestarjetas",
+      "supportsTablet": true
     },
     "android": {
+      "package": "com.inforhard.reportestarjetas",
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
-        "foregroundImage": "./assets/images/android-icon-foreground.png",
-        "backgroundImage": "./assets/images/android-icon-background.png",
-        "monochromeImage": "./assets/images/android-icon-monochrome.png"
+        "backgroundColor": "#E8F5EE",
+        "foregroundImage": "./assets/branding/logo.png"
       },
       "predictiveBackGestureEnabled": false
     },
     "web": {
       "output": "static",
-      "favicon": "./assets/images/favicon.png"
+      "favicon": "./assets/branding/logo.png"
     },
     "plugins": [
       "expo-router",
+      "expo-dev-client",
+      "expo-secure-store",
       [
         "expo-splash-screen",
         {
-          "backgroundColor": "#208AEF",
-          "image": "./assets/images/splash-icon.png",
-          "imageWidth": 76
+          "backgroundColor": "#008A46",
+          "image": "./assets/branding/logo_splash.png",
+          "imageWidth": 120
         }
       ]
     ],
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "fcd7d9e0-f840-4d79-8af3-b5ed9078fa63"
+      }
+    },
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/fcd7d9e0-f840-4d79-8af3-b5ed9078fa63"
     }
   }
 }

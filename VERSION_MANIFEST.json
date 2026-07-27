@@ -1,0 +1,7 @@
+{
+  "app_name": "Reportes de Tarjetas",
+  "company_name": "Inforhard S.R.L",
+  "version": "0.1.0",
+  "stage": "foundation",
+  "api_contract": "v1-compatible"
+}
