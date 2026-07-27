@@ -60,7 +60,9 @@ La primera development build Android:
 - Perfil: `development`.
 - Canal: `development`.
 - Distribución: interna.
-- Estado verificado el 2026-07-27: `IN_QUEUE`.
+- Estado verificado el 2026-07-27: `FINISHED`.
+- APK de distribución interna generado correctamente por EAS.
+- Instalación en dispositivo y conexión con Metro: pendientes de validación.
 - No contiene variables de ambiente de API configuradas en EAS.
 
 ## Seguridad de dependencias
