@@ -1,56 +1,72 @@
-# Welcome to your Expo app 👋
+# Reportes de Tarjetas
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+Frontend universal nuevo para web, Android e iOS. Se construye con Expo SDK 57,
+React Native, React Native Web y TypeScript, manteniendo paridad funcional con la
+aplicación Windows de producción.
 
-## Get started
+Producto de **Inforhard S.R.L**. La identidad visual principal usa el verde
+institucional `#008A46`, tomado de la aplicación de producción.
 
-1. Install dependencies
+## Límites del proyecto
 
-   ```bash
-   npm install
-   ```
+- Este repositorio contiene solamente el frontend universal.
+- El backend Node.js continúa en su repositorio y despliegue independientes.
+- `J:\Proyectos\ReportesTarjetas` es referencia de solo lectura.
+- Desarrollo y staging nunca deben usar datos o procesos productivos.
+- Los contratos `/api/v1` deben mantenerse compatibles con el cliente Windows.
 
-2. Start the app
+Leer primero:
 
-   ```bash
-   npx expo start
-   ```
+- `AGENTS.md`
+- `context/PROYECTO_CONTEXT.md`
+- `context/ARQUITECTURA.md`
+- `context/AMBIENTES.md`
+- `context/MATRIZ_PARIDAD.md`
+- `context/GIT_TRABAJO.md`
 
-In the output, you'll find options to open the app in a
+## Requisitos
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+- Node.js 22.13 o superior.
+- npm.
+- Android Studio para ejecutar Android localmente.
+- Una development build/EAS para probar iOS desde Windows.
 
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
+## Configuración
 
-## Get a fresh project
-
-When you're ready, run:
-
-```bash
-npm run reset-project
+```powershell
+Copy-Item .env.example .env.local
+npm install
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+Modificar `.env.local` para apuntar exclusivamente al backend de desarrollo:
 
-### Other setup steps
+```env
+EXPO_PUBLIC_API_URL=http://servidor-desarrollo:5000/api/v1
+EXPO_PUBLIC_APP_ENV=development
+```
 
-- To set up ESLint for linting, run `npx expo lint`, or follow our guide on ["Using ESLint and Prettier"](https://docs.expo.dev/guides/using-eslint/)
-- If you'd like to set up unit testing, follow our guide on ["Unit Testing with Jest"](https://docs.expo.dev/develop/unit-testing/)
-- Learn more about the TypeScript setup in this template in our guide on ["Using TypeScript"](https://docs.expo.dev/guides/typescript/)
+Nunca guardar tokens, contraseñas o secretos en variables `EXPO_PUBLIC_*`.
 
-## Learn more
+## Desarrollo
 
-To learn more about developing your project with Expo, look at the following resources:
+```powershell
+npm start
+npm run web
+npm run android
+```
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+## Verificación
 
-## Join the community
+```powershell
+npm run check
+npm run web:export
+```
 
-Join our community of developers creating universal apps.
+## Ramas
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+- `main`: siempre integrable y protegida.
+- `feat/<tarea>`: funcionalidad.
+- `fix/<tarea>`: corrección.
+- `docs/<tarea>`: documentación.
+
+Toda integración a `main` requiere pull request y revisión cruzada.
