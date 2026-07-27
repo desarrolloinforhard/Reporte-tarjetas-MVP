@@ -190,8 +190,10 @@ const styles = StyleSheet.create({
   },
   contentCard: {
     flexGrow: 1,
+    flexShrink: 1,
     flexBasis: 380,
     minWidth: 280,
+    maxWidth: '100%',
   },
   providerList: {
     gap: spacing.md,

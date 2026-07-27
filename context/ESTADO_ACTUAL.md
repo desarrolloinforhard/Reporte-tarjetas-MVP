@@ -62,7 +62,9 @@ La primera development build Android:
 - Distribución: interna.
 - Estado verificado el 2026-07-27: `FINISHED`.
 - APK de distribución interna generado correctamente por EAS.
-- Instalación en dispositivo y conexión con Metro: pendientes de validación.
+- APK instalada en un dispositivo Android físico.
+- Conexión con Metro mediante development client: validada.
+- Splash, rutas, navegación inferior, menú y cambio de tema: validados en Android.
 - No contiene variables de ambiente de API configuradas en EAS.
 
 ## Seguridad de dependencias

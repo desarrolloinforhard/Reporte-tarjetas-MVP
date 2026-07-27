@@ -70,7 +70,10 @@ export function SettingsScreen() {
           ].map(([label, value]) => (
             <View key={label} style={[styles.detailRow, { borderBottomColor: colors.border }]}>
               <Text style={[styles.detailLabel, { color: colors.textMuted }]}>{label}</Text>
-              <Text selectable style={[styles.detailValue, { color: colors.text }]}>
+              <Text
+                numberOfLines={2}
+                selectable
+                style={[styles.detailValue, { color: colors.text }]}>
                 {value}
               </Text>
             </View>
@@ -89,8 +92,10 @@ const styles = StyleSheet.create({
   },
   card: {
     flexGrow: 1,
+    flexShrink: 1,
     flexBasis: 420,
     minWidth: 280,
+    maxWidth: '100%',
   },
   optionList: {
     gap: spacing.sm,
@@ -106,6 +111,7 @@ const styles = StyleSheet.create({
   },
   optionCopy: {
     flex: 1,
+    minWidth: 0,
     gap: 2,
   },
   optionTitle: {
@@ -132,17 +138,19 @@ const styles = StyleSheet.create({
     minHeight: 52,
     borderBottomWidth: 1,
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     justifyContent: 'space-between',
     gap: spacing.sm,
+    paddingVertical: spacing.sm,
   },
   detailLabel: {
+    width: 108,
     fontSize: 12,
     fontWeight: '700',
   },
   detailValue: {
-    maxWidth: '70%',
+    flex: 1,
+    minWidth: 0,
     textAlign: 'right',
     fontSize: 12,
     fontWeight: '700',
