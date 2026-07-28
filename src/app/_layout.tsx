@@ -1,7 +1,8 @@
-import { QueryClientProvider } from '@tanstack/react-query';
+import { focusManager, QueryClientProvider } from '@tanstack/react-query';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { ActivityIndicator, StyleSheet, View } from 'react-native';
+import { useEffect } from 'react';
+import { ActivityIndicator, AppState, Platform, StyleSheet, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { queryClient } from '@/config/query-client';
@@ -36,6 +37,14 @@ function RootNavigator() {
 }
 
 export default function RootLayout() {
+  useEffect(() => {
+    if (Platform.OS === 'web') return;
+    const subscription = AppState.addEventListener('change', (status) => {
+      focusManager.setFocused(status === 'active');
+    });
+    return () => subscription.remove();
+  }, []);
+
   return (
     <SafeAreaProvider>
       <AppThemeProvider>

@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
+import { useLocalSearchParams } from 'expo-router';
 import { useMemo, useState } from 'react';
 import {
   Modal,
@@ -281,15 +282,21 @@ function PaymentRow({
 export function PaymentsScreen() {
   const { colors, isDark } = useAppTheme();
   const desktop = useWindowDimensions().width >= breakpoints.tablet;
+  const routeParams = useLocalSearchParams<{
+    from?: string;
+    to?: string;
+    status?: string;
+  }>();
   const [filters, setFilters] = useState<PaymentFilters>({
-    from: daysAgo(30),
-    to: daysAgo(0),
+    from: routeParams.from || daysAgo(30),
+    to: routeParams.to || daysAgo(0),
     provider: '',
-    status: '',
+    status: routeParams.status || '',
     external_reference: '',
     limit: PAGE_SIZE,
     offset: 0,
   });
+  const [mobileFiltersVisible, setMobileFiltersVisible] = useState(false);
   const [selected, setSelected] = useState<Payment | null>(null);
   const filterKey = useMemo(() => JSON.stringify(filters), [filters]);
   const paymentsQuery = useQuery({
@@ -321,29 +328,66 @@ export function PaymentsScreen() {
         ['Pendientes', String(summaryQuery.data.pending_count), 'warning'],
       ] as const)
     : [];
+  const activeFilterCount = [
+    filters.provider,
+    filters.status,
+    filters.branch_id,
+    filters.terminal_id,
+    filters.payment_method,
+    filters.card_brand,
+    filters.cashier_id,
+  ].filter(Boolean).length;
 
   return (
     <ScreenFrame
       description="Consulta operativa de cobros con filtros, totales y detalle de cada transacción."
       hideHeader
       title="Pagos">
-      <Card
-        accessory={
+      {!desktop ? (
+        <View
+          style={[
+            styles.mobileFiltersBar,
+            {
+              backgroundColor: isDark ? colors.surface : '#E8F4ED',
+              borderColor: colors.accent,
+            },
+          ]}>
+          <View style={styles.mobileFiltersSummary}>
+            <Text style={[styles.mobileFiltersTitle, { color: colors.text }]}>Filtros</Text>
+            <Text numberOfLines={1} style={[styles.mobileFiltersPeriod, { color: colors.textMuted }]}>
+              {filters.from} — {filters.to}
+            </Text>
+          </View>
           <Button
-            onPress={() => {
-              paymentsQuery.refetch();
-              summaryQuery.refetch();
-            }}
-            variant="primary">
-            Actualizar
+            onPress={() => setMobileFiltersVisible((visible) => !visible)}
+            style={styles.mobileFiltersButton}
+            variant={mobileFiltersVisible ? 'secondary' : 'primary'}>
+            {mobileFiltersVisible
+              ? 'Ocultar'
+              : activeFilterCount
+                ? `Mostrar (${activeFilterCount})`
+                : 'Mostrar'}
           </Button>
+        </View>
+      ) : null}
+
+      {desktop || mobileFiltersVisible ? <Card
+        accessory={
+          !desktop ? (
+            <Button
+              onPress={() => setMobileFiltersVisible(false)}
+              style={styles.mobileFiltersButton}
+              variant="ghost">
+              Ocultar
+            </Button>
+          ) : undefined
         }
         description="Los resultados y totales usan los mismos criterios."
         style={{
           ...styles.filtersCard,
           backgroundColor: isDark ? colors.surface : '#E8F4ED',
-          borderColor: colors.primaryStrong,
-          borderTopColor: colors.primary,
+          borderColor: colors.accent,
+          borderTopColor: colors.accent,
         }}
         title="Filtros">
         <View style={styles.filterGrid}>
@@ -468,13 +512,13 @@ export function PaymentsScreen() {
             />
           </View>
         </View>
-      </Card>
+      </Card> : null}
 
       <Card
         style={{
           ...styles.metricsCard,
-          borderColor: colors.primaryStrong,
-          borderTopColor: colors.primary,
+          borderColor: colors.accent,
+          borderTopColor: colors.accent,
         }}>
         <View style={styles.metricsRow}>
         {metrics.map(([label, value, badgeTone], index) => (
@@ -524,8 +568,8 @@ export function PaymentsScreen() {
           style={{
             ...styles.operationsCard,
             backgroundColor: isDark ? colors.surface : '#E8F4ED',
-            borderColor: colors.primaryStrong,
-            borderTopColor: colors.primaryStrong,
+            borderColor: colors.accent,
+            borderTopColor: colors.accent,
           }}
           title="Operaciones">
           <View style={styles.operationsSearch}>
@@ -614,6 +658,22 @@ export function PaymentsScreen() {
 }
 
 const styles = StyleSheet.create({
+  mobileFiltersBar: {
+    minHeight: 58,
+    borderWidth: 1,
+    borderTopWidth: 4,
+    borderRadius: radii.lg,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacing.sm,
+  },
+  mobileFiltersSummary: { flex: 1, gap: 2 },
+  mobileFiltersTitle: { fontSize: 15, fontWeight: '900' },
+  mobileFiltersPeriod: { fontSize: 11, lineHeight: 15 },
+  mobileFiltersButton: { minHeight: 36, paddingVertical: 6, paddingHorizontal: 12 },
   filtersCard: { padding: spacing.md, gap: 10, borderTopWidth: 4 },
   filterGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
   filterItem: { flexGrow: 1, flexShrink: 1, flexBasis: 210, minWidth: 180 },

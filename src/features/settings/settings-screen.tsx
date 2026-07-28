@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { Badge } from '@/components/ui/badge';
@@ -16,8 +17,21 @@ const themeOptions: { label: string; value: ThemePreference; description: string
 ];
 
 export function SettingsScreen() {
-  const { colors, preference, setPreference } = useAppTheme();
+  const { colors, preference, savedPreference, savePreference, setPreference } = useAppTheme();
   const { logout, user, loading } = useSession();
+  const [savingTheme, setSavingTheme] = useState(false);
+  const [themeSaved, setThemeSaved] = useState(false);
+  const hasThemeChanges = preference !== savedPreference;
+
+  async function handleSaveTheme() {
+    setSavingTheme(true);
+    try {
+      await savePreference(preference);
+      setThemeSaved(true);
+    } finally {
+      setSavingTheme(false);
+    }
+  }
 
   return (
     <ScreenFrame
@@ -26,7 +40,7 @@ export function SettingsScreen() {
       title="Configuración">
       <View style={styles.grid}>
         <Card
-          description="La persistencia se incorporará junto con la sesión segura."
+          description="Elegí una apariencia y guardala para conservarla al reiniciar."
           style={styles.card}
           title="Apariencia">
           <View style={styles.optionList}>
@@ -37,7 +51,10 @@ export function SettingsScreen() {
                   accessibilityRole="radio"
                   accessibilityState={{ checked: active }}
                   key={option.value}
-                  onPress={() => setPreference(option.value)}
+                  onPress={() => {
+                    setPreference(option.value);
+                    setThemeSaved(false);
+                  }}
                   style={({ pressed }) => [
                     styles.option,
                     {
@@ -61,6 +78,22 @@ export function SettingsScreen() {
                 </Pressable>
               );
             })}
+          </View>
+          <View style={styles.saveRow}>
+            <Text style={[styles.saveStatus, { color: colors.textMuted }]}>
+              {hasThemeChanges
+                ? 'Hay cambios sin guardar'
+                : themeSaved
+                  ? 'Configuración guardada'
+                  : 'Preferencia actual guardada'}
+            </Text>
+            <Button
+              disabled={!hasThemeChanges}
+              loading={savingTheme}
+              onPress={handleSaveTheme}
+              variant={hasThemeChanges ? 'primary' : 'secondary'}>
+              {hasThemeChanges ? 'Guardar configuración' : 'Guardado ✓'}
+            </Button>
           </View>
         </Card>
 
@@ -121,6 +154,18 @@ const styles = StyleSheet.create({
   },
   optionList: {
     gap: spacing.sm,
+  },
+  saveRow: {
+    marginTop: spacing.md,
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacing.sm,
+  },
+  saveStatus: {
+    flexGrow: 1,
+    fontSize: 12,
   },
   option: {
     minHeight: 64,

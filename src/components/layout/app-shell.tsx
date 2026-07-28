@@ -1,4 +1,5 @@
 import { PropsWithChildren, useMemo, useState } from 'react';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import {
   Image,
   Modal,
@@ -49,9 +50,11 @@ function NavItem({
             backgroundColor: active ? colors.primary : colors.surfaceMuted,
           },
         ]}>
-        <Text style={[styles.navSymbolText, { color: active ? colors.onPrimary : colors.textMuted }]}>
-          {route.symbol}
-        </Text>
+        <Ionicons
+          color={active ? colors.onPrimary : colors.textMuted}
+          name={route.icon as keyof typeof Ionicons.glyphMap}
+          size={18}
+        />
       </View>
       {!compact ? (
         <View style={styles.navCopy}>
@@ -169,7 +172,12 @@ export function AppShell({ children }: PropsWithChildren) {
           </View>
         ) : null}
 
-        <View style={styles.main}>
+        <View
+          onStartShouldSetResponderCapture={() => {
+            if (isDesktop && !sidebarCollapsed) setSidebarCollapsed(true);
+            return false;
+          }}
+          style={styles.main}>
           {isMobile ? (
             <View
               style={[
@@ -194,10 +202,7 @@ export function AppShell({ children }: PropsWithChildren) {
           {isMobile ? (
             <View
               accessibilityRole="tablist"
-              style={[
-                styles.bottomBar,
-                { backgroundColor: colors.surface, borderColor: colors.border },
-              ]}>
+              style={styles.bottomBar}>
               {mobileRoutes.map((route) => {
                 const active = isRouteActive(pathname, route.href);
                 return (
@@ -206,17 +211,19 @@ export function AppShell({ children }: PropsWithChildren) {
                     accessibilityState={{ selected: active }}
                     key={route.href}
                     onPress={() => navigate(route)}
-                    style={styles.bottomItem}>
-                    <View
+                    style={[
+                      styles.bottomItem,
+                      { backgroundColor: active ? 'rgba(255,255,255,0.20)' : 'transparent' },
+                    ]}>
+                    <Text
                       style={[
-                        styles.bottomSymbol,
-                        { backgroundColor: active ? colors.primarySoft : 'transparent' },
+                        styles.bottomLabel,
+                        {
+                          color: '#FFFFFF',
+                          fontWeight: active ? '900' : '700',
+                          opacity: active ? 1 : 0.82,
+                        },
                       ]}>
-                      <Text style={[styles.bottomSymbolText, { color: active ? colors.primary : colors.textMuted }]}>
-                        {route.symbol}
-                      </Text>
-                    </View>
-                    <Text style={[styles.bottomLabel, { color: active ? colors.primary : colors.textMuted }]}>
                       {route.shortLabel}
                     </Text>
                   </Pressable>
@@ -227,17 +234,23 @@ export function AppShell({ children }: PropsWithChildren) {
                 accessibilityRole="tab"
                 accessibilityState={{ selected: moreActive }}
                 onPress={() => setMenuOpen(true)}
-                style={styles.bottomItem}>
-                <View
+                style={[
+                  styles.bottomItem,
+                  {
+                    backgroundColor: moreActive
+                      ? 'rgba(255,255,255,0.20)'
+                      : 'transparent',
+                  },
+                ]}>
+                <Text
                   style={[
-                    styles.bottomSymbol,
-                    { backgroundColor: moreActive ? colors.primarySoft : 'transparent' },
+                    styles.bottomLabel,
+                    {
+                      color: '#FFFFFF',
+                      fontWeight: moreActive ? '900' : '700',
+                      opacity: moreActive ? 1 : 0.82,
+                    },
                   ]}>
-                  <Text style={[styles.bottomSymbolText, { color: moreActive ? colors.primary : colors.textMuted }]}>
-                    +
-                  </Text>
-                </View>
-                <Text style={[styles.bottomLabel, { color: moreActive ? colors.primary : colors.textMuted }]}>
                   Más
                 </Text>
               </Pressable>
@@ -333,13 +346,13 @@ const styles = StyleSheet.create({
   company: {
     fontSize: 11,
     lineHeight: 14,
-    fontWeight: '900',
+    fontWeight: '700',
     letterSpacing: 0.6,
   },
   product: {
     fontSize: 15,
     lineHeight: 19,
-    fontWeight: '800',
+    fontWeight: '700',
   },
   navList: {
     flex: 1,
@@ -366,18 +379,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  navSymbolText: {
-    fontSize: 9,
-    fontWeight: '900',
-    letterSpacing: 0.2,
-  },
   navCopy: {
     flex: 1,
     gap: 1,
   },
   navLabel: {
     fontSize: 13,
-    fontWeight: '800',
+    fontWeight: '700',
   },
   navDescription: {
     fontSize: 9,
@@ -397,7 +405,7 @@ const styles = StyleSheet.create({
   },
   environmentTitle: {
     fontSize: 11,
-    fontWeight: '800',
+    fontWeight: '700',
   },
   environmentCopy: {
     fontSize: 9,
@@ -451,38 +459,37 @@ const styles = StyleSheet.create({
   },
   bottomBar: {
     position: 'absolute',
-    left: 0,
-    right: 0,
-    bottom: 0,
-    minHeight: 70,
-    borderTopWidth: 1,
+    left: 12,
+    right: 12,
+    bottom: 12,
+    minHeight: 58,
+    borderWidth: 1,
+    borderColor: '#00B85C',
+    borderRadius: 22,
+    backgroundColor: '#00B85C',
     flexDirection: 'row',
-    paddingHorizontal: spacing.xs,
-    paddingTop: 6,
-    paddingBottom: spacing.sm,
+    alignItems: 'center',
+    padding: 6,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 5 },
+    shadowOpacity: 0.18,
+    shadowRadius: 12,
+    elevation: 10,
+    overflow: 'hidden',
   },
   bottomItem: {
     flex: 1,
     minWidth: 0,
+    minHeight: 44,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 2,
-  },
-  bottomSymbol: {
-    minWidth: 38,
-    height: 28,
-    borderRadius: radii.pill,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  bottomSymbolText: {
-    fontSize: 10,
-    fontWeight: '900',
+    borderRadius: 16,
+    paddingHorizontal: 3,
   },
   bottomLabel: {
     maxWidth: '100%',
-    fontSize: 10,
-    fontWeight: '700',
+    fontSize: 11,
+    textAlign: 'center',
   },
   modalBackdrop: {
     flex: 1,

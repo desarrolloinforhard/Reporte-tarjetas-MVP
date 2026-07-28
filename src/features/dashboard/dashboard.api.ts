@@ -60,12 +60,25 @@ const syncStatusSchema = z
   })
   .passthrough();
 
+const reconciliationSummarySchema = z
+  .object({
+    total_payments: z.number(),
+    matched_count: z.number(),
+    sale_not_found_count: z.number(),
+    amount_mismatch_count: z.number(),
+    pending_review_count: z.number(),
+    problem_count: z.number().optional(),
+    total_difference: z.number(),
+  })
+  .passthrough();
+
 export type ReportSummary = z.infer<typeof reportSummarySchema>;
 export type DailyPayment = z.infer<typeof dailyPaymentSchema>;
 export type SyncStatus = z.infer<typeof syncStatusSchema>;
 
 export type DashboardData = {
   summary: ReportSummary;
+  reconciliation: z.infer<typeof reconciliationSummarySchema>;
   daily: DailyPayment[];
   sync: SyncStatus;
 };
@@ -81,11 +94,12 @@ function queryString(from: string, to: string) {
 
 export async function getDashboardData(from: string, to: string): Promise<DashboardData> {
   const query = queryString(from, to);
-  const [summary, daily, sync] = await Promise.all([
+  const [summary, reconciliation, daily, sync] = await Promise.all([
     apiRequest(`/reports/summary?${query}`, reportSummarySchema),
+    apiRequest(`/reconciliation/summary?${query}`, reconciliationSummarySchema),
     apiRequest(`/metrics/daily-payments?${query}`, z.array(dailyPaymentSchema)),
     apiRequest('/sync/status', syncStatusSchema),
   ]);
 
-  return { summary, daily, sync };
+  return { summary, reconciliation, daily, sync };
 }

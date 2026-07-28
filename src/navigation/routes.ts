@@ -2,7 +2,7 @@ export type AppRoute = {
   href: '/' | '/pagos' | '/liquidaciones' | '/conciliacion' | '/calidad' | '/configuracion';
   label: string;
   shortLabel: string;
-  symbol: string;
+  icon: string;
   description: string;
 };
 
@@ -11,42 +11,42 @@ export const appRoutes: AppRoute[] = [
     href: '/',
     label: 'Inicio',
     shortLabel: 'Inicio',
-    symbol: 'IN',
+    icon: 'home-outline',
     description: 'Resumen operativo',
   },
   {
     href: '/pagos',
     label: 'Pagos',
     shortLabel: 'Pagos',
-    symbol: 'PA',
+    icon: 'card-outline',
     description: 'Consulta y detalle',
   },
   {
     href: '/liquidaciones',
     label: 'Liquidaciones',
     shortLabel: 'Liq.',
-    symbol: 'LI',
+    icon: 'receipt-outline',
     description: 'Presentaciones y archivos',
   },
   {
     href: '/conciliacion',
     label: 'Conciliación',
     shortLabel: 'Concil.',
-    symbol: 'CO',
+    icon: 'git-compare-outline',
     description: 'Diferencias e incidencias',
   },
   {
     href: '/calidad',
     label: 'Calidad de datos',
     shortLabel: 'Calidad',
-    symbol: 'CD',
+    icon: 'shield-checkmark-outline',
     description: 'Alertas y diagnóstico',
   },
   {
     href: '/configuracion',
     label: 'Configuración',
     shortLabel: 'Ajustes',
-    symbol: 'CF',
+    icon: 'settings-outline',
     description: 'Preferencias y conexión',
   },
 ];

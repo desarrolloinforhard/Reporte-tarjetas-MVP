@@ -1,7 +1,8 @@
 export const brand = {
-  primary: '#008A46',
-  primaryPressed: '#006F39',
-  primaryStrong: '#005D31',
+  accent: '#00B85C',
+  primary: '#00B85C',
+  primaryPressed: '#009E4F',
+  primaryStrong: '#007A3D',
   primarySoft: '#E5F4EC',
   primarySoftDark: '#123D2A',
 } as const;
@@ -31,8 +32,6 @@ export const lightColors = {
 
 export const darkColors: AppColors = {
   ...brand,
-  primary: '#41C47E',
-  primaryPressed: '#65D497',
   primarySoft: '#143E2A',
   background: '#0D1511',
   surface: '#15201A',
@@ -51,7 +50,7 @@ export const darkColors: AppColors = {
   dangerSoft: '#44201E',
   info: '#79BDF2',
   infoSoft: '#17334A',
-  onPrimary: '#061A10',
+  onPrimary: '#FFFFFF',
   overlay: 'rgba(0, 0, 0, 0.68)',
 };
 
