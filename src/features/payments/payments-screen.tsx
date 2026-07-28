@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { useLocalSearchParams } from 'expo-router';
 import { useMemo, useState } from 'react';
 import {
@@ -68,6 +69,150 @@ function dateTime(value: string) {
     minute: '2-digit',
     hour12: false,
   }).format(new Date(value));
+}
+
+function isoDate(date: Date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+function DatePickerField({
+  label,
+  value,
+  onChange,
+}: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+}) {
+  const { colors } = useAppTheme();
+  const initialDate = /^\d{4}-\d{2}-\d{2}$/.test(value)
+    ? new Date(`${value}T12:00:00`)
+    : new Date();
+  const [open, setOpen] = useState(false);
+  const [visibleMonth, setVisibleMonth] = useState(
+    new Date(initialDate.getFullYear(), initialDate.getMonth(), 1),
+  );
+  const calendarDays = useMemo(() => {
+    const year = visibleMonth.getFullYear();
+    const month = visibleMonth.getMonth();
+    const firstWeekday = (new Date(year, month, 1).getDay() + 6) % 7;
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    return Array.from({ length: firstWeekday + daysInMonth }, (_, index) =>
+      index < firstWeekday ? null : new Date(year, month, index - firstWeekday + 1),
+    );
+  }, [visibleMonth]);
+  const monthLabel = new Intl.DateTimeFormat('es-AR', {
+    month: 'long',
+    year: 'numeric',
+  }).format(visibleMonth);
+
+  const showCalendar = () => {
+    setVisibleMonth(new Date(initialDate.getFullYear(), initialDate.getMonth(), 1));
+    setOpen(true);
+  };
+
+  return (
+    <View style={styles.selectGroup}>
+      <Text style={[styles.fieldLabel, { color: colors.text }]}>{label}</Text>
+      <Pressable
+        accessibilityLabel={`${label}: ${value}. Abrir calendario`}
+        accessibilityRole="button"
+        onPress={showCalendar}
+        style={[
+          styles.selectField,
+          { backgroundColor: colors.surface, borderColor: colors.borderStrong },
+        ]}>
+        <Text style={[styles.selectValue, { color: colors.text }]}>{value}</Text>
+        <Ionicons color={colors.primary} name="calendar-outline" size={18} />
+      </Pressable>
+      <Modal
+        animationType="fade"
+        onRequestClose={() => setOpen(false)}
+        transparent
+        visible={open}>
+        <Pressable
+          onPress={() => setOpen(false)}
+          style={[styles.selectBackdrop, { backgroundColor: colors.overlay }]}>
+          <Pressable
+            accessibilityViewIsModal
+            onPress={(event) => event.stopPropagation()}
+            style={[styles.calendarModal, { backgroundColor: colors.surfaceElevated }]}>
+            <View style={styles.calendarHeader}>
+              <Button
+                accessibilityLabel="Mes anterior"
+                onPress={() =>
+                  setVisibleMonth(
+                    (current) => new Date(current.getFullYear(), current.getMonth() - 1, 1),
+                  )
+                }
+                variant="ghost">
+                ‹
+              </Button>
+              <Text style={[styles.calendarTitle, { color: colors.text }]}>{monthLabel}</Text>
+              <Button
+                accessibilityLabel="Mes siguiente"
+                onPress={() =>
+                  setVisibleMonth(
+                    (current) => new Date(current.getFullYear(), current.getMonth() + 1, 1),
+                  )
+                }
+                variant="ghost">
+                ›
+              </Button>
+            </View>
+            <View style={styles.calendarGrid}>
+              {['L', 'M', 'X', 'J', 'V', 'S', 'D'].map((day) => (
+                <Text key={day} style={[styles.calendarWeekday, { color: colors.textMuted }]}>
+                  {day}
+                </Text>
+              ))}
+              {calendarDays.map((date, index) =>
+                date ? (
+                  <Pressable
+                    accessibilityRole="button"
+                    key={isoDate(date)}
+                    onPress={() => {
+                      onChange(isoDate(date));
+                      setOpen(false);
+                    }}
+                    style={[
+                      styles.calendarDay,
+                      isoDate(date) === value && { backgroundColor: colors.primary },
+                    ]}>
+                    <Text
+                      style={[
+                        styles.calendarDayText,
+                        { color: isoDate(date) === value ? colors.onPrimary : colors.text },
+                      ]}>
+                      {date.getDate()}
+                    </Text>
+                  </Pressable>
+                ) : (
+                  <View key={`empty-${index}`} style={styles.calendarDay} />
+                ),
+              )}
+            </View>
+            <View style={styles.calendarActions}>
+              <Button
+                onPress={() => {
+                  onChange(isoDate(new Date()));
+                  setOpen(false);
+                }}
+                variant="secondary">
+                Hoy
+              </Button>
+              <Button onPress={() => setOpen(false)} variant="ghost">
+                Cerrar
+              </Button>
+            </View>
+          </Pressable>
+        </Pressable>
+      </Modal>
+    </View>
+  );
 }
 
 function tone(status: string): 'success' | 'danger' | 'warning' | 'neutral' {
@@ -392,18 +537,16 @@ export function PaymentsScreen() {
         title="Filtros">
         <View style={styles.filterGrid}>
           <View style={styles.filterItem}>
-            <TextField
+            <DatePickerField
               label="Desde"
-              onChangeText={(value) => setFilter('from', value)}
-              style={styles.compactInput}
+              onChange={(value) => setFilter('from', value)}
               value={filters.from}
             />
           </View>
           <View style={styles.filterItem}>
-            <TextField
+            <DatePickerField
               label="Hasta"
-              onChangeText={(value) => setFilter('to', value)}
-              style={styles.compactInput}
+              onChange={(value) => setFilter('to', value)}
               value={filters.to}
             />
           </View>
@@ -726,6 +869,48 @@ const styles = StyleSheet.create({
   },
   selectOptionLabel: { flex: 1, fontSize: 15, fontWeight: '700' },
   selectCheck: { fontSize: 18, fontWeight: '900' },
+  calendarModal: {
+    width: '100%',
+    maxWidth: 390,
+    borderRadius: radii.xl,
+    padding: spacing.md,
+    gap: spacing.md,
+  },
+  calendarHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacing.sm,
+  },
+  calendarTitle: {
+    flex: 1,
+    fontSize: 17,
+    fontWeight: '700',
+    textAlign: 'center',
+    textTransform: 'capitalize',
+  },
+  calendarGrid: { flexDirection: 'row', flexWrap: 'wrap' },
+  calendarWeekday: {
+    width: '14.285%',
+    paddingVertical: spacing.sm,
+    fontSize: 12,
+    fontWeight: '700',
+    textAlign: 'center',
+  },
+  calendarDay: {
+    width: '14.285%',
+    minHeight: 42,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: radii.pill,
+  },
+  calendarDayText: { fontSize: 14, fontWeight: '600' },
+  calendarActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacing.sm,
+  },
   metricsCard: { padding: 0, gap: 0, overflow: 'hidden', borderTopWidth: 4 },
   metricsRow: { flexDirection: 'row', flexWrap: 'wrap' },
   metricSegment: {
