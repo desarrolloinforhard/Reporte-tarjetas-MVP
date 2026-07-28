@@ -98,14 +98,23 @@ oficiales del SDK.
   `desarrolloinforhard/paquete-webserver`.
 - Copia Git independiente:
   `J:\Proyectos\paquete-webserver-dev`.
-- El remoto está en backend `3.8.79`.
+- `main` permanece en backend `3.8.79`; `develop` contiene la recuperación
+  controlada de `3.8.80`.
 - La carpeta operativa `J:\Proyectos\paquete-webserver` declara `3.8.80` y no es
   un repositorio Git válido porque su directorio `.git` está vacío.
-- Se detectaron cambios locales no publicados de Clover y Unicobros.
-- La reconciliación se registró en
+- Los cambios `3.8.80` de Clover y Unicobros fueron recuperados en `develop` sin
+  copiar secretos, datos ni artefactos.
+- Reconciliación cerrada:
   `desarrolloinforhard/paquete-webserver#1`.
-- No se configurará el runtime de desarrollo hasta recuperar y revisar la fuente
-  `3.8.80` sin copiar secretos, datos ni artefactos.
+- Backend `develop`: `22a1f7d`.
+- El diagnóstico Unicobros queda desactivado por defecto y sus logs redactan
+  secretos y datos sensibles.
+- El runtime de desarrollo soporta `DISABLE_DATABASE=true` y CORS con orígenes
+  explícitos.
+- Smoke test aprobado en puerto temporal: API online, ODBC desconectado, sesión
+  local disponible y origen no autorizado rechazado con HTTP 403.
+- GitHub Actions del backend ejecuta pruebas y controles de sintaxis en `main` y
+  `develop`.
 
 ## Límites activos
 
