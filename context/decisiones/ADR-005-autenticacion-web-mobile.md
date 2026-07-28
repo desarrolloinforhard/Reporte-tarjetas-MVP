@@ -1,6 +1,6 @@
 # ADR-005 — Autenticación separada por plataforma
 
-- Estado: propuesta para revisión de Nicolás y Misael.
+- Estado: aceptada para implementación en desarrollo aislado; pendiente de validación en staging.
 - Fecha: 2026-07-28.
 
 ## Contexto
@@ -69,3 +69,15 @@ frontend.
   usuario.
 - La navegación protegida se incorporará cuando el backend pueda distinguir de
   manera real una sesión válida de una anónima.
+
+## Implementación de desarrollo
+
+- Se agregaron `POST /sessions/login`, `POST /sessions/refresh` y
+  `POST /sessions/logout` sin modificar el login administrativo.
+- La web recibe una cookie opaca `HttpOnly` y no puede leer tokens.
+- Android/iOS recibe tokens opacos; el refresh se guarda con SecureStore.
+- El refresh es rotativo y el logout revoca la familia completa.
+- Expo Router protege el grupo `(app)` y deja `sign-in` como ruta pública.
+- Los usuarios, permisos y sesiones actuales son exclusivamente sintéticos.
+- El almacenamiento en memoria es deliberado para desarrollo y se reemplazará
+  por persistencia revocable antes de staging.

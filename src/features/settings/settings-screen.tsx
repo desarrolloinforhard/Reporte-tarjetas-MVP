@@ -1,9 +1,11 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { ScreenFrame } from '@/components/layout/screen-frame';
 import { appEnvironment } from '@/config/environment';
+import { useSession } from '@/features/auth/session-provider';
 import { radii, spacing } from '@/theme/tokens';
 import { ThemePreference, useAppTheme } from '@/theme/theme-provider';
 
@@ -15,6 +17,7 @@ const themeOptions: { label: string; value: ThemePreference; description: string
 
 export function SettingsScreen() {
   const { colors, preference, setPreference } = useAppTheme();
+  const { logout, user, loading } = useSession();
 
   return (
     <ScreenFrame
@@ -78,6 +81,25 @@ export function SettingsScreen() {
               </Text>
             </View>
           ))}
+        </Card>
+
+        <Card
+          description="Sesión del ambiente aislado de desarrollo"
+          style={styles.card}
+          title="Cuenta">
+          <View style={styles.account}>
+            <View>
+              <Text style={[styles.optionTitle, { color: colors.text }]}>
+                {user?.display_name || 'Usuario'}
+              </Text>
+              <Text style={[styles.optionDescription, { color: colors.textMuted }]}>
+                {user?.username} · {user?.role}
+              </Text>
+            </View>
+            <Button loading={loading} onPress={logout} variant="secondary">
+              Cerrar sesión
+            </Button>
+          </View>
         </Card>
       </View>
     </ScreenFrame>
@@ -154,5 +176,8 @@ const styles = StyleSheet.create({
     textAlign: 'right',
     fontSize: 12,
     fontWeight: '700',
+  },
+  account: {
+    gap: spacing.md,
   },
 });

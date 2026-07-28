@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { ApiError } from '@/api/api-error';
 import { apiResponseSchema } from '@/api/api-response';
 import { appEnvironment } from '@/config/environment';
+import { getAccessToken } from '@/features/auth/auth-token-store';
 
 type RequestOptions = Omit<RequestInit, 'body'> & {
   body?: unknown;
@@ -20,13 +21,15 @@ export async function apiRequest<T extends z.ZodType>(
   if (options.body !== undefined) {
     headers.set('Content-Type', 'application/json');
   }
-  if (options.token) {
-    headers.set('Authorization', `Bearer ${options.token}`);
+  const token = options.token ?? getAccessToken();
+  if (token) {
+    headers.set('Authorization', `Bearer ${token}`);
   }
 
   let response: Response;
   try {
     response = await fetch(`${appEnvironment.apiBaseUrl}${path}`, {
+      credentials: 'include',
       ...options,
       headers,
       body: options.body === undefined ? undefined : JSON.stringify(options.body),

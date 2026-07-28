@@ -24,5 +24,21 @@ export const currentUserSchema = z
   })
   .passthrough();
 
+export const authResultSchema = z
+  .object({
+    session: currentSessionSchema,
+    user: currentUserSchema,
+    token_type: z.enum(['Bearer', 'Cookie']),
+    expires_in: z.number().positive(),
+    access_token: z.string().min(1).nullable(),
+    refresh_token: z.string().min(1).nullable(),
+  })
+  .passthrough();
+
+export const logoutResultSchema = z.object({
+  logged_out: z.literal(true),
+});
+
 export type CurrentSession = z.infer<typeof currentSessionSchema>;
 export type CurrentUser = z.infer<typeof currentUserSchema>;
+export type AuthResult = z.infer<typeof authResultSchema>;

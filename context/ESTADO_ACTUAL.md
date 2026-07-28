@@ -39,6 +39,9 @@
 - Fixtures sintéticos para resumen, evolución diaria, proveedores y sincronización.
 - Dashboard Inicio conectado al backend aislado mediante TanStack Query y contratos Zod.
 - Estados de carga, error, reintento y actualización implementados en Inicio.
+- Login sintético con cookie HttpOnly en web y tokens SecureStore en native.
+- Renovación rotativa, cierre de sesión y rutas protegidas implementados.
+- URL de API separada por plataforma para conservar cookies seguras en web.
 
 ## Validación realizada
 
@@ -53,6 +56,8 @@
 - Navegación móvil y cambio de tema verificados sin errores de consola.
 - Dashboard conectado validado en escritorio y móvil con datos sintéticos.
 - Endpoints fixture verificados por HTTP y sin acceso a ODBC.
+- Autenticación web verificada: login, persistencia tras recarga y logout.
+- Contrato HTTP verificado para login web/native, refresh rotativo y revocación.
 
 ## Runtime local
 
@@ -85,18 +90,17 @@ oficiales del SDK.
 
 ## Siguiente hito
 
-1. Acordar e implementar el contrato real de login, renovación y cierre de sesión.
-2. Incorporar persistencia segura y navegación protegida en el frontend.
-3. Migrar Pagos usando contratos y fixtures sintéticos.
-4. Preparar un ambiente de staging sin acceso a producción.
+1. Validar login y persistencia de sesión en Android con development build.
+2. Migrar Pagos usando contratos y fixtures sintéticos.
+3. Definir autorización por cliente y sucursal.
+4. Preparar persistencia de sesiones y un ambiente de staging sin producción.
 
 ## Hallazgo de autenticación
 
-- `GET /api/v1/sessions/current` todavía devuelve una identidad local siempre autenticada.
-- `GET /api/v1/users/me` todavía construye el usuario desde configuración local.
+- `GET /api/v1/sessions/current` distingue sesión válida de anónima.
+- `GET /api/v1/users/me` requiere autenticación y deriva la identidad de la sesión.
 - El login del panel administrativo no es apto para la aplicación web/móvil.
-- No se activarán rutas protegidas ni login ficticio hasta disponer de un backend
-  de desarrollo y un contrato revisado por Nicolás y Misael.
+- La autenticación implementada sigue limitada al modo fixture de desarrollo.
 
 ## Fuente del backend
 
@@ -112,7 +116,7 @@ oficiales del SDK.
   copiar secretos, datos ni artefactos.
 - Reconciliación cerrada:
   `desarrolloinforhard/paquete-webserver#1`.
-- Backend `develop`: `e9be574`.
+- Backend `develop`: `9aace85`.
 - El diagnóstico Unicobros queda desactivado por defecto y sus logs redactan
   secretos y datos sensibles.
 - El runtime de desarrollo soporta `DISABLE_DATABASE=true` y CORS con orígenes

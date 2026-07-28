@@ -13,7 +13,7 @@ Este archivo coordina necesidades del frontend universal. La implementación ocu
 | BE-001 | Inventariar endpoints y contratos usados por la app Bootstack | en_progreso | Nicolás/Misael | Solo lectura |
 | BE-002 | Preparar runtime y datos seguros de desarrollo | disponible_desarrollo | Nicolás/Misael | Sin producción |
 | BE-003 | Preparar staging aislado | pendiente | Misael | Sin producción |
-| BE-004 | Diseñar autenticación web/móvil y transición del cliente legacy | en_progreso | Nicolás/Misael | No activar globalmente |
+| BE-004 | Diseñar autenticación web/móvil y transición del cliente legacy | disponible_desarrollo | Nicolás/Misael | No activar globalmente |
 | BE-005 | Definir autorización por cliente, sucursal, rol y operación | pendiente | Misael | Aditiva |
 | BE-006 | Configurar CORS por ambiente | pendiente | Misael | Aditiva |
 | BE-007 | Generar especificación verificable de `/api/v1` | pendiente | Nicolás/Misael | Sin cambio |
@@ -75,3 +75,11 @@ El dataset sintético habilita:
 Todas las respuestas fixture declaran `meta.fixture=true`. Inicio fue validado
 en web de escritorio y móvil contra el backend aislado, sin acceso a ODBC ni
 información de clientes.
+
+## Estado vigente de BE-004
+
+El backend aislado publica login, renovación rotativa, consulta y cierre de
+sesión. Web utiliza una cookie opaca HttpOnly y native utiliza access/refresh
+tokens opacos. Expo protege las rutas y almacena el refresh nativo con
+SecureStore. Falta validar la development build Android y reemplazar el
+almacenamiento volátil antes de staging.
