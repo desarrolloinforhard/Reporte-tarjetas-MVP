@@ -1,34 +1,90 @@
+import { useQuery } from '@tanstack/react-query';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { FeedbackState } from '@/components/ui/feedback-state';
 import { ScreenFrame } from '@/components/layout/screen-frame';
+import { getDashboardData } from '@/features/dashboard/dashboard.api';
 import { radii, spacing } from '@/theme/tokens';
 import { useAppTheme } from '@/theme/theme-provider';
 
-const metrics = [
-  { label: 'Total procesado', value: '$ 12.458.920', detail: '1.284 operaciones', tone: 'success' as const },
-  { label: 'Conciliados', value: '96,8 %', detail: '1.243 pagos', tone: 'success' as const },
-  { label: 'Con diferencias', value: '24', detail: 'Requieren revisión', tone: 'warning' as const },
-  { label: 'Ventas faltantes', value: '17', detail: 'Pendientes de análisis', tone: 'danger' as const },
-];
+function dateDaysAgo(days: number) {
+  const date = new Date();
+  date.setHours(12, 0, 0, 0);
+  date.setDate(date.getDate() - days);
+  return date.toISOString().slice(0, 10);
+}
 
-const providers = [
-  { name: 'Clover', amount: '$ 6.840.320', share: 72 },
-  { name: 'Payway', amount: '$ 3.971.600', share: 51 },
-  { name: 'Mercado Pago', amount: '$ 1.647.000', share: 29 },
-];
+function currency(value: number) {
+  return new Intl.NumberFormat('es-AR', {
+    style: 'currency',
+    currency: 'ARS',
+    maximumFractionDigits: 0,
+  }).format(value);
+}
+
+function providerName(value: string) {
+  const names: Record<string, string> = {
+    clover: 'Clover',
+    mercadopago: 'Mercado Pago',
+    payway: 'Payway',
+  };
+  return names[value] || value;
+}
 
 export function DashboardScreen() {
   const { colors } = useAppTheme();
+  const from = dateDaysAgo(7);
+  const to = dateDaysAgo(0);
+  const dashboardQuery = useQuery({
+    queryKey: ['dashboard', from, to],
+    queryFn: () => getDashboardData(from, to),
+  });
+
+  const summary = dashboardQuery.data?.summary;
+  const maxProviderAmount = Math.max(
+    1,
+    ...(summary?.by_provider.map((provider) => provider.total_amount) || []),
+  );
+  const metrics = summary
+    ? [
+        {
+          label: 'Total procesado',
+          value: currency(summary.total_amount),
+          detail: `${summary.payments_count} operaciones`,
+          tone: 'success' as const,
+        },
+        {
+          label: 'Aprobados',
+          value: String(summary.approved_count),
+          detail: 'Operaciones confirmadas',
+          tone: 'success' as const,
+        },
+        {
+          label: 'Rechazados',
+          value: String(summary.rejected_count),
+          detail: 'Operaciones no aprobadas',
+          tone: 'danger' as const,
+        },
+        {
+          label: 'Devoluciones',
+          value: String(summary.refunds_count),
+          detail: currency(summary.refund_amount),
+          tone: 'warning' as const,
+        },
+      ]
+    : [];
 
   return (
     <ScreenFrame
       actions={
         <>
           <Button variant="secondary">Últimos 7 días</Button>
-          <Button>Actualizar</Button>
+          <Button onPress={() => dashboardQuery.refetch()}>
+            {dashboardQuery.isFetching ? 'Actualizando…' : 'Actualizar'}
+          </Button>
         </>
       }
       description="Visión consolidada de pagos, conciliación y estado de sincronización."
@@ -43,15 +99,35 @@ export function DashboardScreen() {
         </View>
         <View style={styles.noticeCopy}>
           <Text style={[styles.noticeTitle, { color: colors.text }]}>
-            Vista previa con datos simulados
+            Backend de desarrollo conectado
           </Text>
           <Text style={[styles.noticeDescription, { color: colors.textMuted }]}>
-            El diseño puede probarse en web y móvil sin acceder a información de clientes.
+            Los datos son fixtures sintéticos y no contienen información de clientes.
           </Text>
         </View>
         <Badge label="Ambiente seguro" tone="info" />
       </View>
 
+      {dashboardQuery.isPending ? (
+        <FeedbackState
+          eyebrow="Conectando"
+          title="Cargando resumen"
+          description="Consultando el backend aislado de desarrollo."
+        />
+      ) : null}
+
+      {dashboardQuery.isError ? (
+        <FeedbackState
+          actionLabel="Reintentar"
+          description="Verificá que paquete-webserver-dev esté ejecutándose en el puerto 5001."
+          eyebrow="Sin conexión"
+          onAction={() => dashboardQuery.refetch()}
+          title="No se pudo cargar Inicio"
+        />
+      ) : null}
+
+      {summary ? (
+        <>
       <View style={styles.metricGrid}>
         {metrics.map((metric) => (
           <Card key={metric.label} style={styles.metricCard}>
@@ -70,23 +146,28 @@ export function DashboardScreen() {
 
       <View style={styles.contentGrid}>
         <Card
-          description="Participación estimada del período seleccionado"
+          description="Participación del fixture en los últimos 7 días"
           style={styles.contentCard}
           title="Volumen por proveedor">
           <View style={styles.providerList}>
-            {providers.map((provider) => (
-              <View key={provider.name} style={styles.providerRow}>
+            {summary.by_provider.map((provider) => (
+              <View key={provider.provider} style={styles.providerRow}>
                 <View style={styles.providerHeading}>
-                  <Text style={[styles.providerName, { color: colors.text }]}>{provider.name}</Text>
+                  <Text style={[styles.providerName, { color: colors.text }]}>
+                    {providerName(provider.provider)}
+                  </Text>
                   <Text style={[styles.providerAmount, { color: colors.textMuted }]}>
-                    {provider.amount}
+                    {currency(provider.total_amount)}
                   </Text>
                 </View>
                 <View style={[styles.track, { backgroundColor: colors.surfaceMuted }]}>
                   <View
                     style={[
                       styles.progress,
-                      { backgroundColor: colors.primary, width: `${provider.share}%` },
+                      {
+                        backgroundColor: colors.primary,
+                        width: `${Math.round((provider.total_amount / maxProviderAmount) * 100)}%`,
+                      },
                     ]}
                   />
                 </View>
@@ -101,9 +182,10 @@ export function DashboardScreen() {
           style={styles.contentCard}
           title="Estado del sistema">
           {[
-            ['API de desarrollo', 'Pendiente de URL'],
-            ['Base de pruebas', 'Sin conexión'],
-            ['Sincronización', 'Modo simulado'],
+            ['API de desarrollo', 'Conectada'],
+            ['Base de datos', 'Aislada / sin ODBC'],
+            ['Sincronización', dashboardQuery.data?.sync.overall_status || 'Sin datos'],
+            ['Evolución diaria', `${dashboardQuery.data?.daily.length || 0} puntos`],
           ].map(([label, status]) => (
             <View
               key={label}
@@ -115,6 +197,8 @@ export function DashboardScreen() {
           ))}
         </Card>
       </View>
+        </>
+      ) : null}
     </ScreenFrame>
   );
 }

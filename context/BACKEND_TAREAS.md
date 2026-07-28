@@ -11,7 +11,7 @@ Este archivo coordina necesidades del frontend universal. La implementación ocu
 | ID | Tarea | Estado | Responsable | Compatibilidad |
 |---|---|---|---|---|
 | BE-001 | Inventariar endpoints y contratos usados por la app Bootstack | en_progreso | Nicolás/Misael | Solo lectura |
-| BE-002 | Preparar runtime y datos seguros de desarrollo | en_progreso | Nicolás/Misael | Sin producción |
+| BE-002 | Preparar runtime y datos seguros de desarrollo | disponible_desarrollo | Nicolás/Misael | Sin producción |
 | BE-003 | Preparar staging aislado | pendiente | Misael | Sin producción |
 | BE-004 | Diseñar autenticación web/móvil y transición del cliente legacy | en_progreso | Nicolás/Misael | No activar globalmente |
 | BE-005 | Definir autorización por cliente, sucursal, rol y operación | pendiente | Misael | Aditiva |
@@ -61,6 +61,17 @@ La copia Git para desarrollo se encuentra en
 `J:\Proyectos\paquete-webserver-dev`. No se debe inicializar ni reparar Git dentro
 de `J:\Proyectos\paquete-webserver`.
 
-El runtime aislado puede iniciarse con `DISABLE_DATABASE=true`, proveedores y
-ngrok deshabilitados y CORS limitado a orígenes explícitos. Falta incorporar un
-dataset sintético antes de validar rutas de negocio dependientes de ODBC.
+El runtime aislado puede iniciarse con `DISABLE_DATABASE=true`,
+`FIXTURE_MODE=true`, proveedores y ngrok deshabilitados y CORS limitado a
+orígenes explícitos.
+
+El dataset sintético habilita:
+
+- `GET /api/v1/reports/summary`
+- `GET /api/v1/metrics/daily-payments`
+- `GET /api/v1/metrics/provider-comparison`
+- `GET /api/v1/sync/status`
+
+Todas las respuestas fixture declaran `meta.fixture=true`. Inicio fue validado
+en web de escritorio y móvil contra el backend aislado, sin acceso a ODBC ni
+información de clientes.

@@ -35,18 +35,24 @@
 - Contratos tipados para la sesión y el usuario actuales del backend.
 - Cliente de sesión preparado para cookies web mediante `credentials: include`.
 - Propuesta de autenticación web/móvil documentada en ADR-005.
+- Backend de desarrollo aislado con `DISABLE_DATABASE=true` y `FIXTURE_MODE=true`.
+- Fixtures sintéticos para resumen, evolución diaria, proveedores y sincronización.
+- Dashboard Inicio conectado al backend aislado mediante TanStack Query y contratos Zod.
+- Estados de carga, error, reintento y actualización implementados en Inicio.
 
 ## Validación realizada
 
 - `npm run lint`: aprobado.
 - `npm run typecheck`: aprobado.
-- `npm run test`: 4 pruebas aprobadas.
+- `npm run test`: 7 pruebas aprobadas.
 - `npm run web:export`: aprobado.
 - Configuración pública de Expo: aprobada.
 - `npx expo-doctor`: 20/20 controles aprobados.
 - Node portátil `v22.23.1 x64` validado para el frontend.
 - Validación visual web: escritorio 1440 px, tablet 820 px y móvil 390 px.
 - Navegación móvil y cambio de tema verificados sin errores de consola.
+- Dashboard conectado validado en escritorio y móvil con datos sintéticos.
+- Endpoints fixture verificados por HTTP y sin acceso a ODBC.
 
 ## Runtime local
 
@@ -79,10 +85,10 @@ oficiales del SDK.
 
 ## Siguiente hito
 
-1. Configurar un backend de desarrollo aislado.
-2. Acordar e implementar el contrato real de login, renovación y cierre de sesión.
-3. Incorporar persistencia segura y navegación protegida en el frontend.
-4. Migrar Inicio con datos reales del ambiente de desarrollo.
+1. Acordar e implementar el contrato real de login, renovación y cierre de sesión.
+2. Incorporar persistencia segura y navegación protegida en el frontend.
+3. Migrar Pagos usando contratos y fixtures sintéticos.
+4. Preparar un ambiente de staging sin acceso a producción.
 
 ## Hallazgo de autenticación
 
@@ -106,11 +112,13 @@ oficiales del SDK.
   copiar secretos, datos ni artefactos.
 - Reconciliación cerrada:
   `desarrolloinforhard/paquete-webserver#1`.
-- Backend `develop`: `22a1f7d`.
+- Backend `develop`: `e9be574`.
 - El diagnóstico Unicobros queda desactivado por defecto y sus logs redactan
   secretos y datos sensibles.
 - El runtime de desarrollo soporta `DISABLE_DATABASE=true` y CORS con orígenes
   explícitos.
+- `FIXTURE_MODE=true` expone datos sintéticos identificados con
+  `meta.fixture=true` para Inicio, sin consultar ODBC.
 - Smoke test aprobado en puerto temporal: API online, ODBC desconectado, sesión
   local disponible y origen no autorizado rechazado con HTTP 403.
 - GitHub Actions del backend ejecuta pruebas y controles de sintaxis en `main` y
