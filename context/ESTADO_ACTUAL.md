@@ -43,12 +43,16 @@
 - Renovación rotativa, cierre de sesión y rutas protegidas implementados.
 - URL de API separada por plataforma para conservar cookies seguras en web.
 - Estrategia de staging, piloto controlado, producción y rollback documentada.
+- Módulo Pagos conectado al backend aislado con resumen, filtros completos,
+  paginación y detalle universal.
+- Presentación responsive de Pagos: tabla en web/tablet y tarjetas en móvil.
+- Contratos Zod y pruebas automatizadas para listado, resumen, catálogos y detalle.
 
 ## Validación realizada
 
 - `npm run lint`: aprobado.
 - `npm run typecheck`: aprobado.
-- `npm run test`: 7 pruebas aprobadas.
+- `npm run test`: 11 pruebas aprobadas.
 - `npm run web:export`: aprobado.
 - Configuración pública de Expo: aprobada.
 - `npx expo-doctor`: 20/20 controles aprobados.
@@ -59,6 +63,8 @@
 - Endpoints fixture verificados por HTTP y sin acceso a ODBC.
 - Autenticación web verificada: login, persistencia tras recarga y logout.
 - Contrato HTTP verificado para login web/native, refresh rotativo y revocación.
+- Pagos verificado por HTTP y visualmente: 12 operaciones, paginación de 6,
+  filtros, métricas y detalle, sin acceso a ODBC.
 
 ## Runtime local
 
@@ -91,8 +97,8 @@ oficiales del SDK.
 
 ## Siguiente hito
 
-1. Validar login y persistencia de sesión en Android con development build.
-2. Migrar Pagos usando contratos y fixtures sintéticos.
+1. Validar login, Pagos y persistencia de sesión en Android con development build.
+2. Completar exportación y vistas guardadas del módulo Pagos.
 3. Definir autorización por cliente y sucursal.
 4. Preparar persistencia de sesiones y un ambiente de staging sin producción.
 
@@ -117,13 +123,15 @@ oficiales del SDK.
   copiar secretos, datos ni artefactos.
 - Reconciliación cerrada:
   `desarrolloinforhard/paquete-webserver#1`.
-- Backend `develop`: `9aace85`.
+- Backend `develop`: `c5fc387`.
 - El diagnóstico Unicobros queda desactivado por defecto y sus logs redactan
   secretos y datos sensibles.
 - El runtime de desarrollo soporta `DISABLE_DATABASE=true` y CORS con orígenes
   explícitos.
 - `FIXTURE_MODE=true` expone datos sintéticos identificados con
   `meta.fixture=true` para Inicio, sin consultar ODBC.
+- Los endpoints sintéticos de Pagos cubren listado, resumen, catálogos y detalle,
+  requieren sesión y no consultan ODBC.
 - Smoke test aprobado en puerto temporal: API online, ODBC desconectado, sesión
   local disponible y origen no autorizado rechazado con HTTP 403.
 - GitHub Actions del backend ejecuta pruebas y controles de sintaxis en `main` y

@@ -9,6 +9,7 @@ type ScreenFrameProps = PropsWithChildren<{
   description: string;
   eyebrow?: string;
   actions?: ReactNode;
+  hideHeader?: boolean;
 }>;
 
 export function ScreenFrame({
@@ -16,6 +17,7 @@ export function ScreenFrame({
   description,
   eyebrow = 'Reportes de Tarjetas',
   actions,
+  hideHeader = false,
   children,
 }: ScreenFrameProps) {
   const { colors } = useAppTheme();
@@ -25,16 +27,18 @@ export function ScreenFrame({
       contentContainerStyle={styles.scrollContent}
       style={[styles.scroll, { backgroundColor: colors.background }]}>
       <View style={styles.container}>
-        <View style={styles.header}>
-          <View style={styles.heading}>
-            <Text style={[styles.eyebrow, { color: colors.primary }]}>{eyebrow}</Text>
-            <Text accessibilityRole="header" style={[styles.title, { color: colors.text }]}>
-              {title}
-            </Text>
-            <Text style={[styles.description, { color: colors.textMuted }]}>{description}</Text>
+        {!hideHeader ? (
+          <View style={styles.header}>
+            <View style={styles.heading}>
+              <Text style={[styles.eyebrow, { color: colors.primary }]}>{eyebrow}</Text>
+              <Text accessibilityRole="header" style={[styles.title, { color: colors.text }]}>
+                {title}
+              </Text>
+              <Text style={[styles.description, { color: colors.textMuted }]}>{description}</Text>
+            </View>
+            {actions ? <View style={styles.actions}>{actions}</View> : null}
           </View>
-          {actions ? <View style={styles.actions}>{actions}</View> : null}
-        </View>
+        ) : null}
         {children}
       </View>
     </ScrollView>

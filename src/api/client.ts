@@ -10,11 +10,16 @@ type RequestOptions = Omit<RequestInit, 'body'> & {
   token?: string;
 };
 
-export async function apiRequest<T extends z.ZodType>(
+export type ApiResult<T> = {
+  data: T;
+  meta: Record<string, unknown>;
+};
+
+export async function apiRequestWithMeta<T extends z.ZodType>(
   path: string,
   dataSchema: T,
   options: RequestOptions = {},
-): Promise<z.infer<T>> {
+): Promise<ApiResult<z.infer<T>>> {
   const headers = new Headers(options.headers);
   headers.set('Accept', 'application/json');
 
@@ -53,7 +58,7 @@ export async function apiRequest<T extends z.ZodType>(
   const envelope = parsed.data as {
     ok: boolean;
     data: z.infer<T> | null;
-    meta: { request_id?: string | null };
+    meta: Record<string, unknown> & { request_id?: string | null };
     error: { code: string; message: string } | null;
   };
 
@@ -70,5 +75,14 @@ export async function apiRequest<T extends z.ZodType>(
     throw new ApiError('INVALID_RESPONSE', 'La API no devolvió datos.', response.status);
   }
 
-  return envelope.data;
+  return { data: envelope.data, meta: envelope.meta };
+}
+
+export async function apiRequest<T extends z.ZodType>(
+  path: string,
+  dataSchema: T,
+  options: RequestOptions = {},
+): Promise<z.infer<T>> {
+  const result = await apiRequestWithMeta(path, dataSchema, options);
+  return result.data;
 }

@@ -96,9 +96,11 @@ export function AppShell({ children }: PropsWithChildren) {
   const pathname = usePathname();
   const { colors } = useAppTheme();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const isDesktop = width >= breakpoints.desktop;
   const isTablet = width >= breakpoints.tablet && !isDesktop;
   const isMobile = width < breakpoints.tablet;
+  const compactSidebar = isTablet || sidebarCollapsed;
   const activeRoute = useMemo(
     () => appRoutes.find((route) => isRouteActive(pathname, route.href)) ?? appRoutes[0],
     [pathname],
@@ -118,14 +120,14 @@ export function AppShell({ children }: PropsWithChildren) {
           <View
             style={[
               styles.sidebar,
-              isTablet && styles.sidebarCompact,
+              compactSidebar && styles.sidebarCompact,
               { backgroundColor: colors.surface, borderColor: colors.border },
             ]}>
-            <Brand compact={isTablet} />
+            <Brand compact={compactSidebar} />
             <View style={styles.navList}>
               {appRoutes.map((route) => (
                 <NavItem
-                  compact={isTablet}
+                  compact={compactSidebar}
                   key={route.href}
                   onPress={() => navigate(route)}
                   route={route}
@@ -134,7 +136,7 @@ export function AppShell({ children }: PropsWithChildren) {
             </View>
             <View style={[styles.environment, { backgroundColor: colors.surfaceMuted }]}>
               <View style={[styles.statusDot, { backgroundColor: colors.warning }]} />
-              {!isTablet ? (
+              {!compactSidebar ? (
                 <View>
                   <Text style={[styles.environmentTitle, { color: colors.text }]}>
                     Desarrollo
@@ -145,6 +147,25 @@ export function AppShell({ children }: PropsWithChildren) {
                 </View>
               ) : null}
             </View>
+            {isDesktop ? (
+              <Pressable
+                accessibilityLabel={
+                  sidebarCollapsed ? 'Abrir menú lateral' : 'Cerrar menú lateral'
+                }
+                accessibilityRole="button"
+                onPress={() => setSidebarCollapsed((current) => !current)}
+                style={({ pressed }) => [
+                  styles.sidebarToggle,
+                  {
+                    backgroundColor: pressed ? colors.primarySoft : colors.surfaceMuted,
+                    borderColor: colors.border,
+                  },
+                ]}>
+                <Text style={[styles.sidebarToggleText, { color: colors.textMuted }]}>
+                  {sidebarCollapsed ? '☰' : '‹'}
+                </Text>
+              </Pressable>
+            ) : null}
           </View>
         ) : null}
 
@@ -271,18 +292,18 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
   },
   sidebar: {
-    width: 278,
+    width: 220,
     borderRightWidth: 1,
-    padding: spacing.md,
-    gap: spacing.lg,
+    padding: 10,
+    gap: 14,
   },
   sidebarCompact: {
-    width: 88,
+    width: 58,
     alignItems: 'center',
-    paddingHorizontal: spacing.sm,
+    paddingHorizontal: 3,
   },
   brand: {
-    minHeight: 66,
+    minHeight: 54,
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
@@ -322,11 +343,11 @@ const styles = StyleSheet.create({
   },
   navList: {
     flex: 1,
-    gap: 6,
+    gap: 4,
   },
   navItem: {
-    minHeight: 58,
-    borderRadius: radii.md,
+    minHeight: 46,
+    borderRadius: 9,
     borderWidth: 1,
     flexDirection: 'row',
     alignItems: 'center',
@@ -334,19 +355,19 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   navItemCompact: {
-    width: 56,
+    width: 46,
     justifyContent: 'center',
     paddingHorizontal: 0,
   },
   navSymbol: {
-    width: 34,
-    height: 34,
-    borderRadius: 10,
+    width: 29,
+    height: 29,
+    borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center',
   },
   navSymbolText: {
-    fontSize: 10,
+    fontSize: 9,
     fontWeight: '900',
     letterSpacing: 0.2,
   },
@@ -355,14 +376,14 @@ const styles = StyleSheet.create({
     gap: 1,
   },
   navLabel: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '800',
   },
   navDescription: {
-    fontSize: 11,
+    fontSize: 9,
   },
   environment: {
-    minHeight: 54,
+    minHeight: 46,
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
@@ -375,11 +396,25 @@ const styles = StyleSheet.create({
     borderRadius: 5,
   },
   environmentTitle: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '800',
   },
   environmentCopy: {
-    fontSize: 10,
+    fontSize: 9,
+  },
+  sidebarToggle: {
+    width: 40,
+    height: 34,
+    alignSelf: 'center',
+    borderWidth: 1,
+    borderRadius: radii.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  sidebarToggleText: {
+    fontSize: 24,
+    lineHeight: 26,
+    fontWeight: '800',
   },
   main: {
     flex: 1,

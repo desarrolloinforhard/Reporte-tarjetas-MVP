@@ -71,10 +71,17 @@ El dataset sintético habilita:
 - `GET /api/v1/metrics/daily-payments`
 - `GET /api/v1/metrics/provider-comparison`
 - `GET /api/v1/sync/status`
+- `GET /api/v1/payments`
+- `GET /api/v1/payments/summary`
+- `GET /api/v1/payments/catalogs`
+- `GET /api/v1/payments/:provider/:id`
 
 Todas las respuestas fixture declaran `meta.fixture=true`. Inicio fue validado
 en web de escritorio y móvil contra el backend aislado, sin acceso a ODBC ni
 información de clientes.
+
+Pagos fue validado con filtros contractuales, resumen, paginación y detalle.
+Las operaciones son sintéticas y las rutas requieren autenticación.
 
 ## Estado vigente de BE-004
 
