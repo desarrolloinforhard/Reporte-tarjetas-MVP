@@ -92,6 +92,21 @@ oficiales del SDK.
 - No se activarán rutas protegidas ni login ficticio hasta disponer de un backend
   de desarrollo y un contrato revisado por Nicolás y Misael.
 
+## Fuente del backend
+
+- Repositorio privado verificado:
+  `desarrolloinforhard/paquete-webserver`.
+- Copia Git independiente:
+  `J:\Proyectos\paquete-webserver-dev`.
+- El remoto está en backend `3.8.79`.
+- La carpeta operativa `J:\Proyectos\paquete-webserver` declara `3.8.80` y no es
+  un repositorio Git válido porque su directorio `.git` está vacío.
+- Se detectaron cambios locales no publicados de Clover y Unicobros.
+- La reconciliación se registró en
+  `desarrolloinforhard/paquete-webserver#1`.
+- No se configurará el runtime de desarrollo hasta recuperar y revisar la fuente
+  `3.8.80` sin copiar secretos, datos ni artefactos.
+
 ## Límites activos
 
 - No modificar `J:\Proyectos\ReportesTarjetas`.
