@@ -42,6 +42,7 @@
 - Login sintético con cookie HttpOnly en web y tokens SecureStore en native.
 - Renovación rotativa, cierre de sesión y rutas protegidas implementados.
 - URL de API separada por plataforma para conservar cookies seguras en web.
+- Estrategia de staging, piloto controlado, producción y rollback documentada.
 
 ## Validación realizada
 

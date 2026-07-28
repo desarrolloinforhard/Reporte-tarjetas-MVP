@@ -9,6 +9,7 @@ Esta carpeta reúne el contexto estable necesario para trabajar en ReportesTarje
 3. `context/ESTADO_ACTUAL.md`
 4. `context/GIT_TRABAJO.md`
 5. Las decisiones aplicables en `context/decisiones/`
+6. `context/DESPLIEGUE_Y_PILOTO.md` antes de planificar staging o producción.
 
 ## Reglas de mantenimiento
 
