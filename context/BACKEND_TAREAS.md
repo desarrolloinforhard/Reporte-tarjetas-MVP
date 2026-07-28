@@ -10,10 +10,10 @@ Este archivo coordina necesidades del frontend universal. La implementación ocu
 
 | ID | Tarea | Estado | Responsable | Compatibilidad |
 |---|---|---|---|---|
-| BE-001 | Inventariar endpoints y contratos usados por la app Bootstack | pendiente | Misael | Solo lectura |
+| BE-001 | Inventariar endpoints y contratos usados por la app Bootstack | en_progreso | Nicolás/Misael | Solo lectura |
 | BE-002 | Preparar runtime y datos seguros de desarrollo | pendiente | Misael | Sin producción |
 | BE-003 | Preparar staging aislado | pendiente | Misael | Sin producción |
-| BE-004 | Diseñar autenticación web/móvil y transición del cliente legacy | pendiente | Nicolás/Misael | No activar globalmente |
+| BE-004 | Diseñar autenticación web/móvil y transición del cliente legacy | en_progreso | Nicolás/Misael | No activar globalmente |
 | BE-005 | Definir autorización por cliente, sucursal, rol y operación | pendiente | Misael | Aditiva |
 | BE-006 | Configurar CORS por ambiente | pendiente | Misael | Aditiva |
 | BE-007 | Generar especificación verificable de `/api/v1` | pendiente | Nicolás/Misael | Sin cambio |

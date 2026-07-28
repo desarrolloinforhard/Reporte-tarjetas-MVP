@@ -1,6 +1,6 @@
 # Estado actual
 
-Última actualización: 2026-07-27.
+Última actualización: 2026-07-28.
 
 ## Implementado
 
@@ -32,6 +32,9 @@
 - Rutas universales para Inicio, Pagos, Liquidaciones, Conciliación, Calidad y Configuración.
 - Dashboard visual con fixtures explícitamente identificados como datos simulados.
 - Pantalla de configuración con selector de apariencia y diagnóstico público.
+- Contratos tipados para la sesión y el usuario actuales del backend.
+- Cliente de sesión preparado para cookies web mediante `credentials: include`.
+- Propuesta de autenticación web/móvil documentada en ADR-005.
 
 ## Validación realizada
 
@@ -76,11 +79,18 @@ oficiales del SDK.
 
 ## Siguiente hito
 
-1. Completar e instalar la development build Android.
-2. Configurar un backend de desarrollo aislado.
-3. Completar autenticación compatible con el cliente Windows.
-4. Implementar el shell responsive.
-5. Migrar Inicio con datos reales de desarrollo.
+1. Configurar un backend de desarrollo aislado.
+2. Acordar e implementar el contrato real de login, renovación y cierre de sesión.
+3. Incorporar persistencia segura y navegación protegida en el frontend.
+4. Migrar Inicio con datos reales del ambiente de desarrollo.
+
+## Hallazgo de autenticación
+
+- `GET /api/v1/sessions/current` todavía devuelve una identidad local siempre autenticada.
+- `GET /api/v1/users/me` todavía construye el usuario desde configuración local.
+- El login del panel administrativo no es apto para la aplicación web/móvil.
+- No se activarán rutas protegidas ni login ficticio hasta disponer de un backend
+  de desarrollo y un contrato revisado por Nicolás y Misael.
 
 ## Límites activos
 
