@@ -1,6 +1,7 @@
 import {
   paymentCatalogsSchema,
   paymentDetailSchema,
+  normalizePaymentAmountFilter,
   paymentSchema,
   paymentsSummarySchema,
 } from '@/features/payments/payments.api';
@@ -32,6 +33,12 @@ const payment = {
 };
 
 describe('contratos de pagos', () => {
+  it('normaliza importes escritos con formato argentino', () => {
+    expect(normalizePaymentAmountFilter('124.500')).toBe('124500');
+    expect(normalizePaymentAmountFilter('$ 124.500,50')).toBe('124500.5');
+    expect(normalizePaymentAmountFilter('124500')).toBe('124500');
+  });
+
   it('acepta listado y medios sin tarjeta', () => {
     expect(paymentSchema.parse(payment).id).toBe('fixture-clover-1');
     expect(paymentSchema.parse({ ...payment, card_last_four: null }).card_last_four).toBeNull();

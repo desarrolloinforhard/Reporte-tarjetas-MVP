@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { useMemo, useState } from 'react';
-import { Modal, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { Modal, Platform, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -24,7 +24,6 @@ const PAGE_SIZE = 20;
 const providers: Record<string, string> = {
   clover: 'Clover',
   mercadopago: 'Mercado Pago',
-  payway: 'Payway',
 };
 const statuses = [
   { value: '', label: 'Todos' },
@@ -115,7 +114,9 @@ function validateRange(from: string, to: string) {
 
 export function SettlementsScreen() {
   const { colors, isDark } = useAppTheme();
-  const desktop = useWindowDimensions().width >= breakpoints.tablet;
+  const { width } = useWindowDimensions();
+  const desktop = width >= breakpoints.tablet;
+  const filtersSidebar = Platform.OS === 'web' && width >= breakpoints.desktop;
   const [filtersVisible, setFiltersVisible] = useState(false);
   const [selected, setSelected] = useState<Settlement | null>(null);
   const [filters, setFilters] = useState<SettlementFilters>({
@@ -124,6 +125,8 @@ export function SettlementsScreen() {
     provider: '',
     status: '',
     external_reference: '',
+    min_amount: '',
+    max_amount: '',
     limit: PAGE_SIZE,
     offset: 0,
   });
@@ -164,7 +167,7 @@ export function SettlementsScreen() {
       description="Seguimiento de acreditaciones estimadas desde pagos del ambiente aislado."
       hideHeader
       title="Liquidaciones">
-      <View style={styles.modeRow}>
+      <View style={[styles.modeRow, filtersSidebar && styles.headingWithSidebar]}>
         <View style={styles.modeCopy}>
           <Text style={[styles.modeTitle, { color: colors.text }]}>Liquidaciones estimadas</Text>
           <Text style={[styles.muted, { color: colors.textMuted }]}>
@@ -185,9 +188,17 @@ export function SettlementsScreen() {
         </View>
       ) : null}
 
+      <View style={[styles.workspace, filtersSidebar && styles.workspaceDesktop]}>
       {desktop || filtersVisible ? (
         <Card
-          style={{ ...styles.filtersCard, borderColor: colors.accent }}
+          style={{
+            ...styles.filtersCard,
+            ...(filtersSidebar ? styles.sidebarFilters : {}),
+            ...(filtersSidebar
+              ? { left: Math.max(spacing.lg, (width - 1440) / 2 + spacing.lg) }
+              : {}),
+            borderColor: filtersSidebar ? colors.border : colors.accent,
+          }}
           title="Filtros">
           <View style={styles.filterGrid}>
             <View style={styles.filterItem}>
@@ -202,6 +213,24 @@ export function SettlementsScreen() {
                 label="Hasta"
                 onChange={(value) => setFilter('to', value)}
                 value={filters.to}
+              />
+            </View>
+            <View style={styles.filterItem}>
+              <TextField
+                keyboardType="decimal-pad"
+                label="Importe mínimo"
+                onChangeText={(value) => setFilter('min_amount', value)}
+                placeholder="Ej.: 10.000"
+                value={filters.min_amount || ''}
+              />
+            </View>
+            <View style={styles.filterItem}>
+              <TextField
+                keyboardType="decimal-pad"
+                label="Importe máximo"
+                onChangeText={(value) => setFilter('max_amount', value)}
+                placeholder="Ej.: 124.500,50"
+                value={filters.max_amount || ''}
               />
             </View>
             <View style={styles.filterItem}>
@@ -232,25 +261,7 @@ export function SettlementsScreen() {
         </Card>
       ) : null}
 
-      <Card style={{ ...styles.metricsCard, borderColor: colors.accent }}>
-        <View style={styles.metricsRow}>
-          {metrics.map(([label, value]) => (
-            <View
-              key={label}
-              style={[
-                styles.metric,
-                {
-                  backgroundColor: colors.surface,
-                  borderColor: colors.border,
-                },
-              ]}>
-              <Text style={[styles.metricLabel, { color: colors.textMuted }]}>{label}</Text>
-              <Text style={[styles.metricValue, { color: colors.text }]}>{value}</Text>
-            </View>
-          ))}
-        </View>
-      </Card>
-
+      <View style={[styles.mainContent, filtersSidebar && styles.mainContentDesktop]}>
       {listQuery.isPending ? (
         <FeedbackState description="Consultando fixtures sin acceso a ODBC." title="Cargando liquidaciones" />
       ) : null}
@@ -267,6 +278,27 @@ export function SettlementsScreen() {
           accessory={<Badge label={`${listQuery.data.total} resultados`} tone="info" />}
           style={{ ...styles.resultsCard, borderColor: colors.accent }}
           title="Liquidaciones">
+          <View
+            style={[
+              styles.metricsRow,
+              styles.integratedMetrics,
+              { borderColor: colors.border },
+            ]}>
+            {metrics.map(([label, value]) => (
+              <View
+                key={label}
+                style={[
+                  styles.metric,
+                  {
+                    backgroundColor: colors.surface,
+                    borderColor: colors.border,
+                  },
+                ]}>
+                <Text style={[styles.metricLabel, { color: colors.textMuted }]}>{label}</Text>
+                <Text style={[styles.metricValue, { color: colors.text }]}>{value}</Text>
+              </View>
+            ))}
+          </View>
           <View style={styles.resultsSearch}>
             <TextField
               label="Buscar referencia"
@@ -279,6 +311,7 @@ export function SettlementsScreen() {
             <ScrollView
               contentContainerStyle={styles.tableScrollContent}
               horizontal
+              style={styles.tableViewport}
               showsHorizontalScrollIndicator>
               <View style={styles.table}>
                 <View style={[styles.tableRow, styles.tableHeader, { backgroundColor: colors.surfaceMuted }]}>
@@ -354,6 +387,9 @@ export function SettlementsScreen() {
           </View>
         </Card>
       ) : null}
+
+      </View>
+      </View>
 
       <Modal animationType="fade" onRequestClose={() => setSelected(null)} transparent visible={Boolean(selected)}>
         <Pressable onPress={() => setSelected(null)} style={[styles.backdrop, { backgroundColor: colors.overlay }]}>
@@ -436,6 +472,23 @@ export function SettlementsScreen() {
 }
 
 const styles = StyleSheet.create({
+  headingWithSidebar: { marginLeft: 304 },
+  workspace: { gap: spacing.lg },
+  workspaceDesktop: { paddingLeft: 304, alignItems: 'flex-start' },
+  mainContent: { gap: spacing.lg },
+  mainContentDesktop: { flex: 1, minWidth: 0, width: '100%', maxWidth: '100%' },
+  sidebarFilters: {
+    width: 280,
+    flexShrink: 0,
+    alignSelf: 'flex-start',
+    position: 'fixed' as 'relative',
+    top: 102,
+    zIndex: 2,
+    padding: 12,
+    gap: 7,
+    borderTopWidth: 1,
+    borderRadius: radii.md,
+  },
   modeRow: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: spacing.md },
   modeCopy: { flex: 1, minWidth: 240, gap: 3 },
   modeTitle: { fontSize: 18, fontWeight: '700' },
@@ -446,14 +499,19 @@ const styles = StyleSheet.create({
   filterGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
   filterItem: { flexGrow: 1, flexShrink: 1, flexBasis: 210, minWidth: 180 },
   filterHint: { marginTop: spacing.sm, fontSize: 11, lineHeight: 16 },
-  metricsCard: { padding: 0, overflow: 'hidden', borderTopWidth: 4 },
   metricsRow: { flexDirection: 'row', flexWrap: 'wrap' },
+  integratedMetrics: {
+    borderWidth: 1,
+    borderRadius: radii.md,
+    overflow: 'hidden',
+  },
   metric: { flexGrow: 1, flexBasis: 180, minHeight: 78, padding: spacing.md, justifyContent: 'center', borderRightWidth: 1, borderBottomWidth: 1, gap: 6 },
   metricLabel: { fontSize: 12, fontWeight: '600' },
   metricValue: { fontSize: 19, fontWeight: '700' },
   resultsCard: { borderTopWidth: 4 },
   resultsSearch: { width: '100%' },
   tableScrollContent: { flexGrow: 1 },
+  tableViewport: { width: '100%', maxWidth: '100%', alignSelf: 'stretch' },
   table: { minWidth: 1120, width: '100%', flexGrow: 1 },
   tableRow: { minHeight: 38, flexDirection: 'row', alignItems: 'center', borderBottomWidth: 1 },
   tableHeader: { borderRadius: radii.sm, borderBottomWidth: 0 },

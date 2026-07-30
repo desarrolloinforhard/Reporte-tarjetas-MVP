@@ -4,6 +4,7 @@ import { useLocalSearchParams } from 'expo-router';
 import { useMemo, useState } from 'react';
 import {
   Modal,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -27,7 +28,7 @@ import {
   PaymentFilters,
 } from '@/features/payments/payments.api';
 import { PaymentDetailModal } from '@/features/payments/payment-detail-modal';
-import { breakpoints, radii, spacing } from '@/theme/tokens';
+import { breakpoints, radii, spacing, typography } from '@/theme/tokens';
 import { useAppTheme } from '@/theme/theme-provider';
 import { formatDate, formatDateTime } from '@/utils/date-format';
 
@@ -35,7 +36,6 @@ const PAGE_SIZE = 20;
 const providers: Record<string, string> = {
   clover: 'Clover',
   mercadopago: 'Mercado Pago',
-  payway: 'Payway',
 };
 const statuses: Record<string, string> = {
   approved: 'Aprobado',
@@ -76,10 +76,12 @@ function DatePickerField({
   label,
   value,
   onChange,
+  compact = false,
 }: {
   label: string;
   value: string;
   onChange: (value: string) => void;
+  compact?: boolean;
 }) {
   const { colors } = useAppTheme();
   const initialDate = /^\d{4}-\d{2}-\d{2}$/.test(value)
@@ -109,17 +111,24 @@ function DatePickerField({
   };
 
   return (
-    <View style={styles.selectGroup}>
-      <Text style={[styles.fieldLabel, { color: colors.text }]}>{label}</Text>
+    <View style={[styles.selectGroup, compact && styles.sidebarSelectGroup]}>
+      <Text
+        style={[styles.fieldLabel, compact && styles.sidebarFieldLabel, { color: colors.text }]}>
+        {label}
+      </Text>
       <Pressable
         accessibilityLabel={`${label}: ${formatDate(value)}. Abrir calendario`}
         accessibilityRole="button"
         onPress={showCalendar}
         style={[
           styles.selectField,
+          compact && styles.sidebarSelectField,
           { backgroundColor: colors.surface, borderColor: colors.borderStrong },
         ]}>
-        <Text style={[styles.selectValue, { color: colors.text }]}>{formatDate(value)}</Text>
+        <Text
+          style={[styles.selectValue, compact && styles.sidebarSelectValue, { color: colors.text }]}>
+          {formatDate(value)}
+        </Text>
         <Ionicons color={colors.primary} name="calendar-outline" size={18} />
       </Pressable>
       <Modal
@@ -244,25 +253,31 @@ function FilterSelect({
   value,
   options,
   onChange,
+  compact = false,
 }: {
   label: string;
   value: string;
   options: { value: string; label: string }[];
   onChange: (value: string) => void;
+  compact?: boolean;
 }) {
   const { colors } = useAppTheme();
   const [open, setOpen] = useState(false);
   const selectedLabel = options.find((option) => option.value === value)?.label || 'Todos';
 
   return (
-    <View style={styles.selectGroup}>
-      <Text style={[styles.fieldLabel, { color: colors.text }]}>{label}</Text>
+    <View style={[styles.selectGroup, compact && styles.sidebarSelectGroup]}>
+      <Text
+        style={[styles.fieldLabel, compact && styles.sidebarFieldLabel, { color: colors.text }]}>
+        {label}
+      </Text>
       <Pressable
         accessibilityLabel={`${label}: ${selectedLabel}`}
         accessibilityRole="button"
         onPress={() => setOpen(true)}
         style={[
           styles.selectField,
+          compact && styles.sidebarSelectField,
           {
             backgroundColor: colors.surface,
             borderColor: value ? colors.primary : colors.borderStrong,
@@ -270,7 +285,11 @@ function FilterSelect({
         ]}>
         <Text
           numberOfLines={1}
-          style={[styles.selectValue, { color: value ? colors.text : colors.textMuted }]}>
+          style={[
+            styles.selectValue,
+            compact && styles.sidebarSelectValue,
+            { color: value ? colors.text : colors.textMuted },
+          ]}>
           {selectedLabel}
         </Text>
         <Text style={[styles.selectArrow, { color: colors.primary }]}>⌄</Text>
@@ -422,18 +441,23 @@ function PaymentRow({
 
 export function PaymentsScreen() {
   const { colors, isDark } = useAppTheme();
-  const desktop = useWindowDimensions().width >= breakpoints.tablet;
+  const { width } = useWindowDimensions();
+  const desktop = width >= breakpoints.tablet;
+  const filtersSidebar = Platform.OS === 'web' && width >= breakpoints.desktop;
   const routeParams = useLocalSearchParams<{
     from?: string;
     to?: string;
     status?: string;
+    provider?: string;
   }>();
   const [filters, setFilters] = useState<PaymentFilters>({
     from: routeParams.from || daysAgo(30),
     to: routeParams.to || daysAgo(0),
-    provider: '',
+    provider: routeParams.provider || '',
     status: routeParams.status || '',
     external_reference: '',
+    min_amount: '',
+    max_amount: '',
     limit: PAGE_SIZE,
     offset: 0,
   });
@@ -477,6 +501,8 @@ export function PaymentsScreen() {
     filters.payment_method,
     filters.card_brand,
     filters.cashier_id,
+    filters.min_amount,
+    filters.max_amount,
   ].filter(Boolean).length;
 
   return (
@@ -512,6 +538,11 @@ export function PaymentsScreen() {
         </View>
       ) : null}
 
+      <View
+        style={[
+          styles.paymentsWorkspace,
+          filtersSidebar && styles.paymentsWorkspaceDesktop,
+        ]}>
       {desktop || mobileFiltersVisible ? <Card
         accessory={
           !desktop ? (
@@ -523,17 +554,22 @@ export function PaymentsScreen() {
             </Button>
           ) : undefined
         }
-        description="Los resultados y totales usan los mismos criterios."
+        description={filtersSidebar ? undefined : 'Los resultados y totales usan los mismos criterios.'}
         style={{
           ...styles.filtersCard,
-          backgroundColor: isDark ? colors.surface : '#E8F4ED',
-          borderColor: colors.accent,
-          borderTopColor: colors.accent,
+          ...(filtersSidebar ? styles.desktopFiltersCard : {}),
+          ...(filtersSidebar
+            ? { left: Math.max(spacing.lg, (width - 1440) / 2 + spacing.lg) }
+            : {}),
+          backgroundColor: colors.surface,
+          borderColor: filtersSidebar ? colors.border : colors.accent,
+          borderTopColor: filtersSidebar ? colors.border : colors.accent,
         }}
         title="Filtros">
         <View style={styles.filterGrid}>
           <View style={styles.filterItem}>
             <DatePickerField
+              compact={filtersSidebar}
               label="Desde"
               onChange={(value) => setFilter('from', value)}
               value={filters.from}
@@ -541,13 +577,35 @@ export function PaymentsScreen() {
           </View>
           <View style={styles.filterItem}>
             <DatePickerField
+              compact={filtersSidebar}
               label="Hasta"
               onChange={(value) => setFilter('to', value)}
               value={filters.to}
             />
           </View>
           <View style={styles.filterItem}>
+            <TextField
+              keyboardType="decimal-pad"
+              label="Importe mínimo"
+              onChangeText={(value) => setFilter('min_amount', value)}
+              placeholder="Ej.: 10.000"
+              style={filtersSidebar ? styles.sidebarTextInput : undefined}
+              value={filters.min_amount || ''}
+            />
+          </View>
+          <View style={styles.filterItem}>
+            <TextField
+              keyboardType="decimal-pad"
+              label="Importe máximo"
+              onChangeText={(value) => setFilter('max_amount', value)}
+              placeholder="Ej.: 124.500,50"
+              style={filtersSidebar ? styles.sidebarTextInput : undefined}
+              value={filters.max_amount || ''}
+            />
+          </View>
+          <View style={styles.filterItem}>
             <FilterSelect
+              compact={filtersSidebar}
               label="Proveedor"
               onChange={(value) => setFilter('provider', value)}
               options={[
@@ -562,6 +620,7 @@ export function PaymentsScreen() {
           </View>
           <View style={styles.filterItem}>
             <FilterSelect
+              compact={filtersSidebar}
               label="Estado"
               onChange={(value) => setFilter('status', value)}
               options={[
@@ -576,6 +635,7 @@ export function PaymentsScreen() {
           </View>
           <View style={styles.filterItem}>
             <FilterSelect
+              compact={filtersSidebar}
               label="Sucursal"
               onChange={(value) =>
                 setFilters((current) => ({
@@ -597,6 +657,7 @@ export function PaymentsScreen() {
           </View>
           <View style={styles.filterItem}>
             <FilterSelect
+              compact={filtersSidebar}
               label="Terminal"
               onChange={(value) => setFilter('terminal_id', value)}
               options={[
@@ -610,6 +671,7 @@ export function PaymentsScreen() {
           </View>
           <View style={styles.filterItem}>
             <FilterSelect
+              compact={filtersSidebar}
               label="Medio de pago"
               onChange={(value) => setFilter('payment_method', value)}
               options={[
@@ -624,6 +686,7 @@ export function PaymentsScreen() {
           </View>
           <View style={styles.filterItem}>
             <FilterSelect
+              compact={filtersSidebar}
               label="Marca"
               onChange={(value) => setFilter('card_brand', value)}
               options={[
@@ -638,6 +701,7 @@ export function PaymentsScreen() {
           </View>
           <View style={styles.filterItem}>
             <FilterSelect
+              compact={filtersSidebar}
               label="Cajero"
               onChange={(value) => setFilter('cashier_id', value)}
               options={[
@@ -653,34 +717,11 @@ export function PaymentsScreen() {
         </View>
       </Card> : null}
 
-      <Card
-        style={{
-          ...styles.metricsCard,
-          borderColor: colors.accent,
-          borderTopColor: colors.accent,
-        }}>
-        <View style={styles.metricsRow}>
-        {metrics.map(([label, value, badgeTone], index) => (
-          <View
-            key={label}
-            style={[
-              styles.metricSegment,
-              {
-                backgroundColor: isDark
-                  ? colors.surface
-                  : index % 2 === 0
-                    ? '#E6F3EB'
-                    : '#F1F8F4',
-                borderColor: isDark ? colors.border : '#B9DAC6',
-              },
-            ]}>
-            <Badge label={label} tone={badgeTone} />
-            <Text style={[styles.metricValue, { color: colors.text }]}>{value}</Text>
-          </View>
-        ))}
-        </View>
-      </Card>
-
+      <View
+        style={[
+          styles.paymentsMain,
+          filtersSidebar && styles.paymentsMainDesktop,
+        ]}>
       {paymentsQuery.isPending ? (
         <FeedbackState
           description="Consultando datos del ambiente aislado."
@@ -695,22 +736,52 @@ export function PaymentsScreen() {
           title="No se pudieron cargar los pagos"
         />
       ) : null}
-      {paymentsQuery.data && paymentsQuery.data.items.length === 0 ? (
-        <FeedbackState
-          description="No hay pagos que coincidan con los filtros seleccionados."
-          title="Sin resultados"
-        />
-      ) : null}
-      {paymentsQuery.data?.items.length ? (
+      {paymentsQuery.data ? (
         <Card
           accessory={<Badge label={`${paymentsQuery.data.total} resultados`} tone="info" />}
           style={{
             ...styles.operationsCard,
-            backgroundColor: isDark ? colors.surface : '#E8F4ED',
-            borderColor: colors.accent,
-            borderTopColor: colors.accent,
+            backgroundColor: colors.surface,
+            borderColor: colors.border,
+            borderTopColor: colors.border,
           }}
           title="Operaciones">
+          <View
+            style={[
+              styles.metricsRow,
+              styles.integratedMetrics,
+              { borderColor: colors.border },
+            ]}>
+            {metrics.map(([label, value, badgeTone]) => (
+              <View
+                key={label}
+                style={[
+                  styles.metricSegment,
+                  {
+                    backgroundColor: colors.surface,
+                    borderColor: isDark ? colors.border : '#B9DAC6',
+                  },
+                ]}>
+                <Text
+                  style={[
+                    styles.metricLabel,
+                    {
+                      color:
+                        badgeTone === 'success'
+                          ? colors.success
+                          : badgeTone === 'danger'
+                            ? colors.danger
+                            : badgeTone === 'warning'
+                              ? colors.warning
+                              : colors.textMuted,
+                    },
+                  ]}>
+                  {label}
+                </Text>
+                <Text style={[styles.metricValue, { color: colors.text }]}>{value}</Text>
+              </View>
+            ))}
+          </View>
           <View style={styles.operationsSearch}>
             <TextField
               label="Buscar referencia"
@@ -724,6 +795,7 @@ export function PaymentsScreen() {
             <ScrollView
               contentContainerStyle={styles.tableScrollContent}
               horizontal
+              style={styles.tableViewport}
               showsHorizontalScrollIndicator>
               <View style={styles.desktopTable}>
                 <View style={[styles.tableHeader, { backgroundColor: colors.surfaceMuted }]}>
@@ -738,31 +810,67 @@ export function PaymentsScreen() {
                   <Text style={[styles.terminalCell, styles.tableHeaderText, { color: colors.text }]}>TERMINAL</Text>
                 </View>
                 <View style={styles.tableRows}>
-                  {paymentsQuery.data.items.map((payment) => (
-                    <PaymentRow
-                      desktop
-                      key={`${payment.provider}-${payment.id}`}
-                      onPress={() => setSelected(payment)}
-                      payment={payment}
-                    />
-                  ))}
+                  {paymentsQuery.data.items.length ? (
+                    paymentsQuery.data.items.map((payment) => (
+                      <PaymentRow
+                        desktop
+                        key={`${payment.provider}-${payment.id}`}
+                        onPress={() => setSelected(payment)}
+                        payment={payment}
+                      />
+                    ))
+                  ) : (
+                    <View style={[styles.emptyTableRow, { borderColor: colors.border }]}>
+                      <Text style={[styles.emptyTableTitle, { color: colors.text }]}>
+                        Sin resultados
+                      </Text>
+                      <Text style={[styles.muted, { color: colors.textMuted }]}>
+                        No hay pagos que coincidan con la referencia o los filtros seleccionados.
+                      </Text>
+                      {filters.external_reference ? (
+                        <Button
+                          onPress={() => setFilter('external_reference', '')}
+                          variant="secondary">
+                          Limpiar búsqueda
+                        </Button>
+                      ) : null}
+                    </View>
+                  )}
                 </View>
               </View>
             </ScrollView>
           ) : null}
           {!desktop ? (
             <View style={styles.paymentList}>
-              {paymentsQuery.data.items.map((payment) => (
-                <PaymentRow
-                  desktop={false}
-                  key={`${payment.provider}-${payment.id}`}
-                  onPress={() => setSelected(payment)}
-                  payment={payment}
-                />
-              ))}
+              {paymentsQuery.data.items.length ? (
+                paymentsQuery.data.items.map((payment) => (
+                  <PaymentRow
+                    desktop={false}
+                    key={`${payment.provider}-${payment.id}`}
+                    onPress={() => setSelected(payment)}
+                    payment={payment}
+                  />
+                ))
+              ) : (
+                <View style={[styles.emptyMobileResults, { borderColor: colors.border }]}>
+                  <Text style={[styles.emptyTableTitle, { color: colors.text }]}>
+                    Sin resultados
+                  </Text>
+                  <Text style={[styles.muted, { color: colors.textMuted }]}>
+                    No hay pagos que coincidan con la referencia o los filtros seleccionados.
+                  </Text>
+                  {filters.external_reference ? (
+                    <Button
+                      onPress={() => setFilter('external_reference', '')}
+                      variant="secondary">
+                      Limpiar búsqueda
+                    </Button>
+                  ) : null}
+                </View>
+              )}
             </View>
           ) : null}
-          <View style={styles.pagination}>
+          {paymentsQuery.data.items.length ? <View style={styles.pagination}>
             <Button
               disabled={filters.offset === 0}
               onPress={() => setFilter('offset', Math.max(0, filters.offset - PAGE_SIZE))}
@@ -780,9 +888,11 @@ export function PaymentsScreen() {
               variant="secondary">
               Siguiente
             </Button>
-          </View>
+          </View> : null}
         </Card>
       ) : null}
+      </View>
+      </View>
 
       <PaymentDetailModal
         data={detailQuery.data}
@@ -797,6 +907,55 @@ export function PaymentsScreen() {
 }
 
 const styles = StyleSheet.create({
+  paymentsWorkspace: {
+    gap: spacing.lg,
+  },
+  paymentsWorkspaceDesktop: {
+    paddingLeft: 304,
+    alignItems: 'flex-start',
+  },
+  paymentsMain: {
+    gap: spacing.lg,
+  },
+  paymentsMainDesktop: {
+    flex: 1,
+    minWidth: 0,
+    width: '100%',
+    maxWidth: '100%',
+  },
+  desktopFiltersCard: {
+    width: 280,
+    flexShrink: 0,
+    alignSelf: 'flex-start',
+    position: 'fixed' as 'relative',
+    top: 33,
+    zIndex: 2,
+    padding: 12,
+    gap: 7,
+    borderTopWidth: 1,
+    borderRadius: radii.md,
+  },
+  emptyTableRow: {
+    minHeight: 128,
+    borderBottomWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.sm,
+    padding: spacing.lg,
+  },
+  emptyMobileResults: {
+    minHeight: 180,
+    borderWidth: 1,
+    borderRadius: radii.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.sm,
+    padding: spacing.lg,
+  },
+  emptyTableTitle: {
+    fontSize: typography.body,
+    fontWeight: '800',
+  },
   mobileFiltersBar: {
     minHeight: 58,
     borderWidth: 1,
@@ -817,8 +976,16 @@ const styles = StyleSheet.create({
   filterGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
   filterItem: { flexGrow: 1, flexShrink: 1, flexBasis: 210, minWidth: 180 },
   compactInput: { minHeight: 38, height: 38, fontSize: 13 },
+  sidebarTextInput: {
+    minHeight: 34,
+    height: 34,
+    paddingHorizontal: 10,
+    fontSize: 12,
+  },
   selectGroup: { gap: 6 },
+  sidebarSelectGroup: { gap: 3 },
   fieldLabel: { fontSize: 13, fontWeight: '700' },
+  sidebarFieldLabel: { fontSize: 11 },
   selectField: {
     minHeight: 38,
     flexDirection: 'row',
@@ -829,7 +996,14 @@ const styles = StyleSheet.create({
     borderRadius: radii.md,
     paddingHorizontal: spacing.md,
   },
+  sidebarSelectField: {
+    minHeight: 34,
+    height: 34,
+    paddingHorizontal: 10,
+    borderRadius: radii.sm,
+  },
   selectValue: { flex: 1, fontSize: 13, fontWeight: '700' },
+  sidebarSelectValue: { fontSize: 12 },
   selectArrow: { fontSize: 20, fontWeight: '900' },
   selectBackdrop: {
     flex: 1,
@@ -907,8 +1081,12 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     gap: spacing.sm,
   },
-  metricsCard: { padding: 0, gap: 0, overflow: 'hidden', borderTopWidth: 4 },
   metricsRow: { flexDirection: 'row', flexWrap: 'wrap' },
+  integratedMetrics: {
+    borderWidth: 1,
+    borderRadius: radii.md,
+    overflow: 'hidden',
+  },
   metricSegment: {
     flexGrow: 1,
     flexBasis: 170,
@@ -922,8 +1100,9 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
   },
   metricValue: { fontSize: 21, lineHeight: 26, fontWeight: '900' },
+  metricLabel: { fontSize: 11, fontWeight: '700' },
   paymentList: { gap: spacing.sm },
-  operationsCard: { borderTopWidth: 4 },
+  operationsCard: { borderTopWidth: 1 },
   operationsSearch: { width: '100%' },
   tableRows: { gap: 1 },
   paymentCard: { padding: spacing.md },
@@ -936,6 +1115,7 @@ const styles = StyleSheet.create({
     gap: spacing.md,
   },
   tableScrollContent: { flexGrow: 1 },
+  tableViewport: { width: '100%', maxWidth: '100%', alignSelf: 'stretch' },
   desktopTable: { minWidth: 1040, width: '100%', flexGrow: 1 },
   tableHeader: {
     minHeight: 34,

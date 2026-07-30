@@ -1,28 +1,29 @@
-import { PropsWithChildren, useMemo, useState } from 'react';
 import Ionicons from '@expo/vector-icons/Ionicons';
+import { Href, usePathname, useRouter } from 'expo-router';
+import { PropsWithChildren, useMemo, useState } from 'react';
 import {
   Image,
   Modal,
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   useWindowDimensions,
   View,
 } from 'react-native';
-import { Href, usePathname, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { appRoutes, AppRoute, isRouteActive } from '@/navigation/routes';
+import { AppRoute, appRoutes, isRouteActive } from '@/navigation/routes';
 import { breakpoints, radii, spacing } from '@/theme/tokens';
 import { useAppTheme } from '@/theme/theme-provider';
 
 function NavItem({
   route,
-  compact,
+  horizontal = false,
   onPress,
 }: {
   route: AppRoute;
-  compact?: boolean;
+  horizontal?: boolean;
   onPress: () => void;
 }) {
   const pathname = usePathname();
@@ -31,64 +32,77 @@ function NavItem({
 
   return (
     <Pressable
+      accessibilityLabel={`${route.label}. ${route.description}`}
       accessibilityRole="link"
       accessibilityState={{ selected: active }}
-      accessibilityLabel={`${route.label}. ${route.description}`}
       onPress={onPress}
       style={({ pressed }) => [
         styles.navItem,
-        compact && styles.navItemCompact,
+        horizontal && styles.navItemHorizontal,
+        active && styles.navItemActive,
         {
-          backgroundColor: active ? colors.primarySoft : pressed ? colors.surfaceMuted : 'transparent',
-          borderColor: 'transparent',
+          backgroundColor: active
+            ? colors.primary
+            : pressed
+              ? colors.surfaceMuted
+              : 'transparent',
+          borderColor: active ? colors.primary : pressed ? colors.borderStrong : 'transparent',
         },
       ]}>
       <View
         style={[
           styles.navSymbol,
-          {
-            backgroundColor: active ? colors.primary : colors.surfaceMuted,
-          },
+          { backgroundColor: 'transparent' },
         ]}>
         <Ionicons
-          color={active ? colors.onPrimary : colors.textMuted}
+          color={active ? '#102018' : colors.textMuted}
           name={route.icon as keyof typeof Ionicons.glyphMap}
-          size={18}
+          size={horizontal ? 17 : 18}
         />
       </View>
-      {!compact ? (
-        <View style={styles.navCopy}>
-          <Text style={[styles.navLabel, { color: active ? colors.primary : colors.text }]}>
-            {route.label}
-          </Text>
+      <View style={horizontal ? styles.topNavCopy : styles.navCopy}>
+        <Text
+          numberOfLines={1}
+          style={[
+            horizontal ? styles.topNavLabel : styles.navLabel,
+            { color: active ? '#102018' : colors.text },
+          ]}>
+          {route.label}
+        </Text>
+        {!horizontal ? (
           <Text numberOfLines={1} style={[styles.navDescription, { color: colors.textMuted }]}>
             {route.description}
           </Text>
-        </View>
-      ) : null}
+        ) : null}
+      </View>
     </Pressable>
   );
 }
 
-function Brand({ compact = false }: { compact?: boolean }) {
+function MobileBrand() {
   const { colors } = useAppTheme();
 
   return (
-    <View style={[styles.brand, compact && styles.brandCompact]}>
-      <View style={[styles.logoBox, { backgroundColor: colors.primarySoft }]}>
-        <Image
-          accessibilityLabel="Logo de Inforhard"
-          resizeMode="contain"
-          source={require('../../../assets/branding/logo.png')}
-          style={styles.logo}
-        />
-      </View>
-      {!compact ? (
-        <View style={styles.brandCopy}>
-          <Text style={[styles.company, { color: colors.primary }]}>Inforhard S.R.L</Text>
-          <Text style={[styles.product, { color: colors.text }]}>Reportes de Tarjetas</Text>
-        </View>
-      ) : null}
+    <View style={[styles.logoBox, { backgroundColor: colors.primarySoft }]}>
+      <Image
+        accessibilityLabel="Logo de Inforhard"
+        resizeMode="contain"
+        source={require('../../../assets/branding/logo.png')}
+        style={styles.logo}
+      />
+    </View>
+  );
+}
+
+function TopBrand() {
+  return (
+    <View style={styles.topBrand}>
+      <Image
+        accessibilityLabel="Logo horizontal de Inforhard"
+        resizeMode="contain"
+        source={require('../../../assets/branding/logo-horizontal.png')}
+        style={styles.horizontalLogo}
+      />
     </View>
   );
 }
@@ -99,11 +113,7 @@ export function AppShell({ children }: PropsWithChildren) {
   const pathname = usePathname();
   const { colors } = useAppTheme();
   const [menuOpen, setMenuOpen] = useState(false);
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const isDesktop = width >= breakpoints.desktop;
-  const isTablet = width >= breakpoints.tablet && !isDesktop;
   const isMobile = width < breakpoints.tablet;
-  const compactSidebar = isTablet || sidebarCollapsed;
   const activeRoute = useMemo(
     () => appRoutes.find((route) => isRouteActive(pathname, route.href)) ?? appRoutes[0],
     [pathname],
@@ -122,72 +132,37 @@ export function AppShell({ children }: PropsWithChildren) {
         {!isMobile ? (
           <View
             style={[
-              styles.sidebar,
-              compactSidebar && styles.sidebarCompact,
+              styles.topNavigation,
               { backgroundColor: colors.surface, borderColor: colors.border },
             ]}>
-            <Brand compact={compactSidebar} />
-            <View style={styles.navList}>
+            <TopBrand />
+            <ScrollView
+              contentContainerStyle={styles.topNavItems}
+              horizontal
+              showsHorizontalScrollIndicator={false}>
               {appRoutes.map((route) => (
                 <NavItem
-                  compact={compactSidebar}
+                  horizontal
                   key={route.href}
                   onPress={() => navigate(route)}
                   route={route}
                 />
               ))}
-            </View>
-            <View style={[styles.environment, { backgroundColor: colors.surfaceMuted }]}>
-              <View style={[styles.statusDot, { backgroundColor: colors.warning }]} />
-              {!compactSidebar ? (
-                <View>
-                  <Text style={[styles.environmentTitle, { color: colors.text }]}>
-                    Desarrollo
-                  </Text>
-                  <Text style={[styles.environmentCopy, { color: colors.textMuted }]}>
-                    Datos simulados
-                  </Text>
-                </View>
-              ) : null}
-            </View>
-            {isDesktop ? (
-              <Pressable
-                accessibilityLabel={
-                  sidebarCollapsed ? 'Abrir menú lateral' : 'Cerrar menú lateral'
-                }
-                accessibilityRole="button"
-                onPress={() => setSidebarCollapsed((current) => !current)}
-                style={({ pressed }) => [
-                  styles.sidebarToggle,
-                  {
-                    backgroundColor: pressed ? colors.primarySoft : colors.surfaceMuted,
-                    borderColor: colors.border,
-                  },
-                ]}>
-                <Text style={[styles.sidebarToggleText, { color: colors.textMuted }]}>
-                  {sidebarCollapsed ? '☰' : '‹'}
-                </Text>
-              </Pressable>
-            ) : null}
+            </ScrollView>
           </View>
         ) : null}
 
-        <View
-          onStartShouldSetResponderCapture={() => {
-            if (isDesktop && !sidebarCollapsed) setSidebarCollapsed(true);
-            return false;
-          }}
-          style={styles.main}>
+        <View style={styles.main}>
           {isMobile ? (
             <View
               style={[
                 styles.mobileHeader,
                 { backgroundColor: colors.surface, borderColor: colors.border },
               ]}>
-              <Brand compact />
+              <MobileBrand />
               <View style={styles.mobileHeading}>
                 <Text style={[styles.mobileProduct, { color: colors.text }]}>
-                  {activeRoute?.label}
+                  {activeRoute?.label ?? 'Inicio'}
                 </Text>
                 <Text style={[styles.mobileCompany, { color: colors.textMuted }]}>Inforhard</Text>
               </View>
@@ -200,9 +175,7 @@ export function AppShell({ children }: PropsWithChildren) {
           {children}
 
           {isMobile ? (
-            <View
-              accessibilityRole="tablist"
-              style={styles.bottomBar}>
+            <View accessibilityRole="tablist" style={styles.bottomBar}>
               {mobileRoutes.map((route) => {
                 const active = isRouteActive(pathname, route.href);
                 return (
@@ -237,9 +210,7 @@ export function AppShell({ children }: PropsWithChildren) {
                 style={[
                   styles.bottomItem,
                   {
-                    backgroundColor: moreActive
-                      ? 'rgba(255,255,255,0.20)'
-                      : 'transparent',
+                    backgroundColor: moreActive ? 'rgba(255,255,255,0.20)' : 'transparent',
                   },
                 ]}>
                 <Text
@@ -302,29 +273,83 @@ const styles = StyleSheet.create({
   },
   shell: {
     flex: 1,
-    flexDirection: 'row',
+    flexDirection: 'column',
   },
-  sidebar: {
-    width: 220,
-    borderRightWidth: 1,
-    padding: 10,
-    gap: 14,
-  },
-  sidebarCompact: {
-    width: 58,
-    alignItems: 'center',
-    paddingHorizontal: 3,
-  },
-  brand: {
-    minHeight: 54,
+  topNavigation: {
+    minHeight: 70,
+    borderBottomWidth: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.sm,
+    paddingHorizontal: spacing.md,
+    gap: spacing.lg,
+    zIndex: 20,
+  },
+  topBrand: {
+    minWidth: 150,
+    flexShrink: 0,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  horizontalLogo: {
+    width: 142,
+    height: 31,
+  },
+  topNavItems: {
+    flexGrow: 1,
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+    gap: 6,
+    paddingVertical: 8,
+  },
+  navItem: {
+    minHeight: 46,
+    borderWidth: 1,
+    borderRadius: radii.md,
+    flexDirection: 'row',
+    alignItems: 'center',
     paddingHorizontal: spacing.sm,
+    gap: spacing.sm,
   },
-  brandCompact: {
+  navItemHorizontal: {
+    minHeight: 42,
+    paddingHorizontal: 11,
+    gap: 5,
+  },
+  navItemActive: {
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.12,
+    shadowRadius: 5,
+    elevation: 3,
+  },
+  navSymbol: {
+    width: 22,
+    height: 22,
+    alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 0,
+  },
+  navCopy: {
+    flex: 1,
+    gap: 1,
+  },
+  topNavCopy: {
+    flexShrink: 0,
+  },
+  navLabel: {
+    fontSize: 13,
+    fontWeight: '500',
+  },
+  topNavLabel: {
+    fontSize: 12.5,
+    fontWeight: '500',
+  },
+  navDescription: {
+    fontSize: 9,
+  },
+  main: {
+    flex: 1,
+    minHeight: 0,
+    minWidth: 0,
   },
   logoBox: {
     width: 44,
@@ -337,96 +362,6 @@ const styles = StyleSheet.create({
   logo: {
     width: 34,
     height: 34,
-    opacity: 1,
-  },
-  brandCopy: {
-    flex: 1,
-    gap: 2,
-  },
-  company: {
-    fontSize: 11,
-    lineHeight: 14,
-    fontWeight: '700',
-    letterSpacing: 0.6,
-  },
-  product: {
-    fontSize: 15,
-    lineHeight: 19,
-    fontWeight: '700',
-  },
-  navList: {
-    flex: 1,
-    gap: 4,
-  },
-  navItem: {
-    minHeight: 46,
-    borderRadius: 9,
-    borderWidth: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: spacing.sm,
-    gap: spacing.sm,
-  },
-  navItemCompact: {
-    width: 46,
-    justifyContent: 'center',
-    paddingHorizontal: 0,
-  },
-  navSymbol: {
-    width: 29,
-    height: 29,
-    borderRadius: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  navCopy: {
-    flex: 1,
-    gap: 1,
-  },
-  navLabel: {
-    fontSize: 13,
-    fontWeight: '700',
-  },
-  navDescription: {
-    fontSize: 9,
-  },
-  environment: {
-    minHeight: 46,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    borderRadius: radii.md,
-    padding: spacing.sm,
-  },
-  statusDot: {
-    width: 9,
-    height: 9,
-    borderRadius: 5,
-  },
-  environmentTitle: {
-    fontSize: 11,
-    fontWeight: '700',
-  },
-  environmentCopy: {
-    fontSize: 9,
-  },
-  sidebarToggle: {
-    width: 40,
-    height: 34,
-    alignSelf: 'center',
-    borderWidth: 1,
-    borderRadius: radii.md,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  sidebarToggleText: {
-    fontSize: 24,
-    lineHeight: 26,
-    fontWeight: '800',
-  },
-  main: {
-    flex: 1,
-    minWidth: 0,
   },
   mobileHeader: {
     height: 64,

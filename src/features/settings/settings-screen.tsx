@@ -1,10 +1,12 @@
+import { useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { getHealth } from '@/api/health.api';
+import { ScreenFrame } from '@/components/layout/screen-frame';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { ScreenFrame } from '@/components/layout/screen-frame';
 import { appEnvironment } from '@/config/environment';
 import { useSession } from '@/features/auth/session-provider';
 import { radii, spacing } from '@/theme/tokens';
@@ -22,6 +24,23 @@ export function SettingsScreen() {
   const [savingTheme, setSavingTheme] = useState(false);
   const [themeSaved, setThemeSaved] = useState(false);
   const hasThemeChanges = preference !== savedPreference;
+  const healthQuery = useQuery({
+    queryKey: ['health'],
+    queryFn: getHealth,
+  });
+  const apiConnected = healthQuery.isSuccess;
+  const databaseLabel = healthQuery.data?.database
+    ? healthQuery.data.database.connected
+      ? 'Conectada'
+      : 'Aislada / sin conexión'
+    : 'No informada';
+  const checkedAt = healthQuery.dataUpdatedAt
+    ? new Intl.DateTimeFormat('es-AR', {
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+      }).format(healthQuery.dataUpdatedAt)
+    : 'Pendiente';
 
   async function handleSaveTheme() {
     setSavingTheme(true);
@@ -58,7 +77,11 @@ export function SettingsScreen() {
                   style={({ pressed }) => [
                     styles.option,
                     {
-                      backgroundColor: active ? colors.primarySoft : pressed ? colors.surfaceMuted : colors.surface,
+                      backgroundColor: active
+                        ? colors.primarySoft
+                        : pressed
+                          ? colors.surfaceMuted
+                          : colors.surface,
                       borderColor: active ? colors.primary : colors.border,
                     },
                   ]}>
@@ -92,16 +115,29 @@ export function SettingsScreen() {
               loading={savingTheme}
               onPress={handleSaveTheme}
               variant={hasThemeChanges ? 'primary' : 'secondary'}>
-              {hasThemeChanges ? 'Guardar configuración' : 'Guardado ✓'}
+              {hasThemeChanges ? 'Guardar configuración' : 'Guardado'}
             </Button>
           </View>
         </Card>
 
-        <Card description="Información pública y no sensible" style={styles.card} title="Diagnóstico">
+        <Card
+          accessory={
+            <Badge
+              label={healthQuery.isPending ? 'Comprobando' : apiConnected ? 'Conectada' : 'Sin conexión'}
+              tone={healthQuery.isPending ? 'info' : apiConnected ? 'success' : 'danger'}
+            />
+          }
+          description="Información pública y no sensible"
+          style={styles.card}
+          title="Diagnóstico">
           {[
             ['Aplicación', '0.1.0'],
             ['Ambiente', appEnvironment.name],
             ['API configurada', appEnvironment.apiBaseUrl],
+            ['Estado de API', apiConnected ? healthQuery.data.status : 'No disponible'],
+            ['Base de datos', databaseLabel],
+            ['Última comprobación', checkedAt],
+            ['Actualización', 'Automática cada 5 segundos'],
             ['Plataformas', 'Web · Android · iOS'],
           ].map(([label, value]) => (
             <View key={label} style={[styles.detailRow, { borderBottomColor: colors.border }]}>
@@ -114,6 +150,21 @@ export function SettingsScreen() {
               </Text>
             </View>
           ))}
+          {healthQuery.isError ? (
+            <View style={styles.diagnosticAction}>
+              <Text
+                style={[
+                  styles.optionDescription,
+                  styles.diagnosticMessage,
+                  { color: colors.danger },
+                ]}>
+                No se pudo conectar con el backend configurado.
+              </Text>
+              <Button variant="secondary" onPress={() => healthQuery.refetch()}>
+                Reintentar
+              </Button>
+            </View>
+          ) : null}
         </Card>
 
         <Card
@@ -211,7 +262,7 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
   },
   detailLabel: {
-    width: 108,
+    width: 118,
     fontSize: 12,
     fontWeight: '700',
   },
@@ -224,5 +275,17 @@ const styles = StyleSheet.create({
   },
   account: {
     gap: spacing.md,
+  },
+  diagnosticAction: {
+    marginTop: spacing.md,
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacing.sm,
+  },
+  diagnosticMessage: {
+    flex: 1,
+    minWidth: 200,
   },
 });

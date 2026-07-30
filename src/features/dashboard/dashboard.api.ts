@@ -34,13 +34,25 @@ const reportSummarySchema = z
   })
   .passthrough();
 
-const dailyPaymentSchema = z
+export const dailyPaymentSchema = z
   .object({
     date: z.string(),
     provider: z.string(),
     payments_count: z.number(),
     total_amount: z.number(),
     net_amount: z.number(),
+    refund_amount: z.number(),
+  })
+  .passthrough();
+
+export const providerComparisonSchema = z
+  .object({
+    provider: z.string(),
+    payments_count: z.number(),
+    approved_rate: z.number(),
+    rejected_rate: z.number(),
+    total_amount: z.number(),
+    average_ticket: z.number(),
     refund_amount: z.number(),
   })
   .passthrough();
@@ -74,12 +86,14 @@ const reconciliationSummarySchema = z
 
 export type ReportSummary = z.infer<typeof reportSummarySchema>;
 export type DailyPayment = z.infer<typeof dailyPaymentSchema>;
+export type ProviderComparison = z.infer<typeof providerComparisonSchema>;
 export type SyncStatus = z.infer<typeof syncStatusSchema>;
 
 export type DashboardData = {
   summary: ReportSummary;
   reconciliation: z.infer<typeof reconciliationSummarySchema>;
   daily: DailyPayment[];
+  providers: ProviderComparison[];
   sync: SyncStatus;
 };
 
@@ -94,12 +108,20 @@ function queryString(from: string, to: string) {
 
 export async function getDashboardData(from: string, to: string): Promise<DashboardData> {
   const query = queryString(from, to);
-  const [summary, reconciliation, daily, sync] = await Promise.all([
+  const [summary, reconciliation, daily, providers, sync] = await Promise.all([
     apiRequest(`/reports/summary?${query}`, reportSummarySchema),
     apiRequest(`/reconciliation/summary?${query}`, reconciliationSummarySchema),
     apiRequest(`/metrics/daily-payments?${query}`, z.array(dailyPaymentSchema)),
+    apiRequest(`/metrics/provider-comparison?${query}`, z.array(providerComparisonSchema)),
     apiRequest('/sync/status', syncStatusSchema),
   ]);
 
-  return { summary, reconciliation, daily, sync };
+  return { summary, reconciliation, daily, providers, sync };
+}
+
+export function getDailyPayments(from: string, to: string): Promise<DailyPayment[]> {
+  return apiRequest(
+    `/metrics/daily-payments?${queryString(from, to)}`,
+    z.array(dailyPaymentSchema),
+  );
 }

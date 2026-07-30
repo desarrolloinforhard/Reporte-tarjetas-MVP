@@ -2,6 +2,7 @@ import { z } from 'zod';
 
 import { apiRequest, apiRequestWithMeta } from '@/api/client';
 import { paymentDetailSchema, paymentSchema } from '@/features/payments/payments.api';
+import { setNormalizedAmountParam } from '@/utils/amount-filter';
 
 export const qualitySummarySchema = z.object({
   checked_count: z.number(),
@@ -38,12 +39,18 @@ export type QualityFilters = {
   to: string;
   provider?: string;
   external_reference?: string;
+  min_amount?: string;
+  max_amount?: string;
 };
 
 function params(filters: QualityFilters) {
   const query = new URLSearchParams();
   Object.entries(filters).forEach(([key, value]) => {
-    if (value) query.set(key, value);
+    if (key === 'min_amount' || key === 'max_amount') {
+      setNormalizedAmountParam(query, key, value);
+    } else if (value) {
+      query.set(key, value);
+    }
   });
   query.set('limit', '100');
   return query.toString();

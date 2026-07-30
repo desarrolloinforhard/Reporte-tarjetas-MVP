@@ -1,7 +1,7 @@
 export const brand = {
-  accent: '#00B85C',
-  primary: '#00B85C',
-  primaryPressed: '#009E4F',
+  accent: '#16C96A',
+  primary: '#16C96A',
+  primaryPressed: '#0EB55C',
   primaryStrong: '#007A3D',
   primarySoft: '#E5F4EC',
   primarySoftDark: '#123D2A',
@@ -9,7 +9,7 @@ export const brand = {
 
 export const lightColors = {
   ...brand,
-  background: '#F4F7F5',
+  background: '#EAF4EE',
   surface: '#FFFFFF',
   surfaceMuted: '#EEF3F0',
   surfaceElevated: '#FFFFFF',
@@ -33,7 +33,7 @@ export const lightColors = {
 export const darkColors: AppColors = {
   ...brand,
   primarySoft: '#143E2A',
-  background: '#0D1511',
+  background: '#050706',
   surface: '#15201A',
   surfaceMuted: '#1D2B23',
   surfaceElevated: '#1A2820',

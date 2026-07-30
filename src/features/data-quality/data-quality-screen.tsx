@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { useMemo, useState } from 'react';
-import { Modal, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { Modal, Platform, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 
 import { ScreenFrame } from '@/components/layout/screen-frame';
 import { Badge } from '@/components/ui/badge';
@@ -26,9 +26,8 @@ const providerOptions = [
   { value: '', label: 'Todos' },
   { value: 'clover', label: 'Clover' },
   { value: 'mercadopago', label: 'Mercado Pago' },
-  { value: 'payway', label: 'Payway' },
 ];
-const providerLabel = (value: string) => ({ clover: 'Clover', mercadopago: 'Mercado Pago', payway: 'Payway' })[value] || value;
+const providerLabel = (value: string) => ({ clover: 'Clover', mercadopago: 'Mercado Pago' })[value] || value;
 const money = (value: number) => new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS' }).format(value);
 function isoDaysAgo(days: number) {
   const date = new Date();
@@ -39,7 +38,9 @@ function isoDaysAgo(days: number) {
 
 export function DataQualityScreen() {
   const { colors, isDark } = useAppTheme();
-  const desktop = useWindowDimensions().width >= breakpoints.tablet;
+  const { width } = useWindowDimensions();
+  const desktop = width >= breakpoints.tablet;
+  const filtersSidebar = Platform.OS === 'web' && width >= breakpoints.desktop;
   const [activeTab, setActiveTab] = useState<QualityCategory>('duplicates');
   const [filtersVisible, setFiltersVisible] = useState(false);
   const [selected, setSelected] = useState<QualityFinding | null>(null);
@@ -49,6 +50,8 @@ export function DataQualityScreen() {
     to: isoDaysAgo(0),
     provider: '',
     external_reference: '',
+    min_amount: '',
+    max_amount: '',
   });
   const rangeError = filters.from > filters.to;
   const queryKey = useMemo(() => JSON.stringify(filters), [filters]);
@@ -72,7 +75,7 @@ export function DataQualityScreen() {
 
   return (
     <ScreenFrame description="Diagnóstico operativo de la información." hideHeader title="Calidad de datos">
-      <View style={styles.heading}>
+      <View style={[styles.heading, filtersSidebar && styles.headingWithSidebar]}>
         <View style={styles.headingCopy}>
           <Text style={[styles.title, { color: colors.text }]}>Calidad de datos</Text>
           <Text style={[styles.muted, { color: colors.textMuted }]}>Control de duplicados, referencias, ventas asociadas e importes.</Text>
@@ -86,17 +89,30 @@ export function DataQualityScreen() {
           <Button variant="secondary" onPress={() => setFiltersVisible((value) => !value)}>{filtersVisible ? 'Ocultar filtros' : 'Mostrar filtros'}</Button>
         </View>
       ) : null}
+      <View style={[styles.workspace, filtersSidebar && styles.workspaceDesktop]}>
       {desktop || filtersVisible ? (
-        <Card title="Período de análisis" style={{ ...styles.section, borderColor: colors.accent }}>
+        <Card
+          title="Período de análisis"
+          style={{
+            ...styles.section,
+            ...(filtersSidebar ? styles.sidebarFilters : {}),
+            ...(filtersSidebar
+              ? { left: Math.max(spacing.lg, (width - 1440) / 2 + spacing.lg) }
+              : {}),
+            borderColor: filtersSidebar ? colors.border : colors.accent,
+          }}>
           <View style={styles.filters}>
             <View style={styles.filter}><DatePickerField label="Desde" value={filters.from} onChange={(value) => setFilter('from', value)} /></View>
             <View style={styles.filter}><DatePickerField label="Hasta" value={filters.to} onChange={(value) => setFilter('to', value)} /></View>
+            <View style={styles.filter}><TextField keyboardType="decimal-pad" label="Importe mínimo" value={filters.min_amount || ''} placeholder="Ej.: 10.000" onChangeText={(value) => setFilter('min_amount', value)} /></View>
+            <View style={styles.filter}><TextField keyboardType="decimal-pad" label="Importe máximo" value={filters.max_amount || ''} placeholder="Ej.: 124.500,50" onChangeText={(value) => setFilter('max_amount', value)} /></View>
             <View style={styles.filter}><SelectField label="Proveedor" value={filters.provider || ''} options={providerOptions} onChange={(value) => setFilter('provider', value)} /></View>
           </View>
           {rangeError ? <Text style={{ color: colors.danger }}>La fecha Desde no puede ser posterior a Hasta.</Text> : null}
         </Card>
       ) : null}
 
+      <View style={[styles.mainContent, filtersSidebar && styles.mainContentDesktop]}>
       {summary ? (
         <Card style={{ ...styles.metricsCard, borderColor: colors.accent }}>
           <View style={styles.metrics}>
@@ -129,7 +145,13 @@ export function DataQualityScreen() {
             <View style={styles.tabs}>
               {tabs.map((tab) => (
                 <Pressable key={tab.key} onPress={() => setActiveTab(tab.key)} style={[styles.tab, activeTab === tab.key && { backgroundColor: colors.primarySoft, borderBottomColor: colors.primary }]}>
-                  <Text style={{ color: activeTab === tab.key ? colors.primary : colors.text, fontWeight: '700' }}>{tab.label}</Text>
+                  <Text
+                    style={{
+                      color: activeTab === tab.key ? '#102018' : colors.text,
+                      fontWeight: '700',
+                    }}>
+                    {tab.label}
+                  </Text>
                   <Badge label={String(qualityQuery.data[tab.key].length)} tone={qualityQuery.data[tab.key].length ? 'warning' : 'success'} />
                 </Pressable>
               ))}
@@ -169,6 +191,9 @@ export function DataQualityScreen() {
           ))}</View> : null}
         </Card>
       ) : null}
+      </View>
+      </View>
+
       <QualityFindingModal
         finding={selected}
         onClose={() => setSelected(null)}
@@ -306,6 +331,23 @@ function QualityRow({ row, color, textColor, onPress }: { row: QualityFinding; c
 }
 
 const styles = StyleSheet.create({
+  headingWithSidebar: { marginLeft: 304 },
+  workspace: { gap: spacing.lg },
+  workspaceDesktop: { paddingLeft: 304, alignItems: 'flex-start' },
+  mainContent: { gap: spacing.lg },
+  mainContentDesktop: { flex: 1, minWidth: 0 },
+  sidebarFilters: {
+    width: 280,
+    flexShrink: 0,
+    alignSelf: 'flex-start',
+    position: 'fixed' as 'relative',
+    top: 86,
+    zIndex: 2,
+    padding: 12,
+    gap: 7,
+    borderTopWidth: 1,
+    borderRadius: radii.md,
+  },
   heading: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: spacing.md },
   headingCopy: { flex: 1, minWidth: 220, gap: 3 },
   title: { fontSize: 20, fontWeight: '700' },

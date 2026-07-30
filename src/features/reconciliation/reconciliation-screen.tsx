@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { useLocalSearchParams } from 'expo-router';
 import { useMemo, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { Modal, Platform, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 
 import { ScreenFrame } from '@/components/layout/screen-frame';
 import { Badge } from '@/components/ui/badge';
@@ -25,7 +25,7 @@ import { useAppTheme } from '@/theme/theme-provider';
 import { formatDate, formatDateTime } from '@/utils/date-format';
 
 const PAGE_SIZE = 20;
-const providers = { clover: 'Clover', mercadopago: 'Mercado Pago', payway: 'Payway' };
+const providers = { clover: 'Clover', mercadopago: 'Mercado Pago' };
 const providerOptions = [
   { value: '', label: 'Todos' },
   ...Object.entries(providers).map(([value, label]) => ({ value, label })),
@@ -72,9 +72,12 @@ function tone(status: ReconciliationStatus): 'success' | 'danger' | 'warning' {
 
 export function ReconciliationScreen() {
   const { colors, isDark } = useAppTheme();
-  const desktop = useWindowDimensions().width >= breakpoints.tablet;
+  const { width } = useWindowDimensions();
+  const desktop = width >= breakpoints.tablet;
+  const filtersSidebar = Platform.OS === 'web' && width >= breakpoints.desktop;
   const params = useLocalSearchParams<{ from?: string; to?: string; status?: string }>();
   const [filtersVisible, setFiltersVisible] = useState(false);
+  const [differencesVisible, setDifferencesVisible] = useState(false);
   const [selected, setSelected] = useState<ReconciliationRow | null>(null);
   const [filters, setFilters] = useState<ReconciliationFilters>({
     from: params.from || isoDaysAgo(30),
@@ -82,6 +85,8 @@ export function ReconciliationScreen() {
     provider: '',
     reconciliation_status: params.status || '',
     external_reference: '',
+    min_amount: '',
+    max_amount: '',
     limit: PAGE_SIZE,
     offset: 0,
   });
@@ -93,7 +98,7 @@ export function ReconciliationScreen() {
     enabled: !rangeError,
   });
   const summaryQuery = useQuery({
-    queryKey: ['reconciliation-summary', filters.from, filters.to, filters.provider],
+    queryKey: ['reconciliation-summary', filterKey],
     queryFn: () => getReconciliationSummary(filters),
     enabled: !rangeError,
   });
@@ -118,6 +123,7 @@ export function ReconciliationScreen() {
         ['Venta no encontrada', summaryQuery.data.sale_not_found_count, 'sale_not_found'],
         ['Diferencias', summaryQuery.data.amount_mismatch_count, 'amount_mismatch'],
         ['Pendientes', summaryQuery.data.pending_review_count, 'pending_review'],
+        ['Total observado', money(summaryQuery.data.total_difference), ''],
       ] as const
     : [];
 
@@ -126,16 +132,6 @@ export function ReconciliationScreen() {
       description="Comparación entre cobros y ventas."
       hideHeader
       title="Conciliación">
-      <View style={styles.heading}>
-        <View style={styles.headingCopy}>
-          <Text style={[styles.title, { color: colors.text }]}>Conciliación</Text>
-          <Text style={[styles.muted, { color: colors.textMuted }]}>
-            Comparación entre cobros y ventas usando datos sintéticos.
-          </Text>
-        </View>
-        <Badge label="Sin llamadas externas" tone="info" />
-      </View>
-
       {!desktop ? (
         <View style={[styles.mobileFilterBar, { backgroundColor: colors.surface, borderColor: colors.accent }]}>
           <Text style={[styles.filterSummary, { color: colors.text }]}>
@@ -147,11 +143,23 @@ export function ReconciliationScreen() {
         </View>
       ) : null}
 
+      <View style={[styles.workspace, filtersSidebar && styles.workspaceDesktop]}>
       {desktop || filtersVisible ? (
-        <Card style={{ ...styles.sectionCard, borderColor: colors.accent }} title="Filtros">
+        <Card
+          style={{
+            ...styles.sectionCard,
+            ...(filtersSidebar ? styles.sidebarFilters : {}),
+            ...(filtersSidebar
+              ? { left: Math.max(spacing.lg, (width - 1440) / 2 + spacing.lg) }
+              : {}),
+            borderColor: filtersSidebar ? colors.border : colors.accent,
+          }}
+          title="Filtros">
           <View style={styles.filterGrid}>
             <View style={styles.filterItem}><DatePickerField label="Desde" value={filters.from} onChange={(value) => setFilter('from', value)} /></View>
             <View style={styles.filterItem}><DatePickerField label="Hasta" value={filters.to} onChange={(value) => setFilter('to', value)} /></View>
+            <View style={styles.filterItem}><TextField keyboardType="decimal-pad" label="Importe mínimo" value={filters.min_amount || ''} placeholder="Ej.: 10.000" onChangeText={(value) => setFilter('min_amount', value)} /></View>
+            <View style={styles.filterItem}><TextField keyboardType="decimal-pad" label="Importe máximo" value={filters.max_amount || ''} placeholder="Ej.: 124.500,50" onChangeText={(value) => setFilter('max_amount', value)} /></View>
             <View style={styles.filterItem}><SelectField label="Proveedor" value={filters.provider ?? ''} options={providerOptions} onChange={(value) => setFilter('provider', value)} /></View>
             <View style={styles.filterItem}><SelectField label="Estado" value={filters.reconciliation_status ?? ''} options={statusOptions} onChange={(value) => setFilter('reconciliation_status', value)} /></View>
           </View>
@@ -161,26 +169,75 @@ export function ReconciliationScreen() {
         </Card>
       ) : null}
 
-      <Card style={{ ...styles.metricsCard, borderColor: colors.accent }}>
-        <View style={styles.metrics}>
-          {metrics.map(([label, value, status]) => (
-            <Pressable
-              key={label}
-              onPress={() => setFilter('reconciliation_status', status)}
-              style={[styles.metric, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-              <Text style={[styles.metricLabel, { color: colors.textMuted }]}>{label}</Text>
-              <Text style={[styles.metricValue, { color: colors.text }]}>{value}</Text>
-            </Pressable>
-          ))}
-        </View>
-      </Card>
-
+      <View style={[styles.mainContent, filtersSidebar && styles.mainContentDesktop]}>
       {listQuery.isPending ? <FeedbackState title="Cargando conciliación" description="Comparando fixtures de pagos y ventas." /> : null}
       {listQuery.isError ? <FeedbackState title="No se pudo cargar la conciliación" description="Verificá que el backend aislado esté activo." actionLabel="Reintentar" onAction={() => listQuery.refetch()} /> : null}
-      {listQuery.data && !listQuery.data.items.length ? <FeedbackState title="Sin resultados" description="No hay registros para los filtros seleccionados." /> : null}
-
-      {listQuery.data?.items.length ? (
+      {listQuery.data ? (
         <Card accessory={<Badge label={`${listQuery.data.total} resultados`} tone="info" />} style={{ ...styles.sectionCard, borderColor: colors.accent }} title="Resultados">
+          <View
+            style={[
+              styles.metrics,
+              styles.integratedMetrics,
+              desktop && styles.metricsDesktop,
+              { borderColor: colors.border },
+            ]}>
+            {metrics.map(([label, value, status]) => (
+              <Pressable
+                key={label}
+                onPress={() => {
+                  if (label === 'Total observado') {
+                    setDifferencesVisible(true);
+                    return;
+                  }
+                  setFilter('reconciliation_status', status);
+                }}
+                style={[
+                  styles.metric,
+                  desktop && styles.metricDesktop,
+                  desktop && label === 'Total observado' && styles.observedMetricDesktop,
+                  { backgroundColor: colors.surface, borderColor: colors.border },
+                ]}>
+                <Text style={[styles.metricLabel, { color: colors.textMuted }]}>{label}</Text>
+                <Text
+                  numberOfLines={1}
+                  adjustsFontSizeToFit
+                  style={[styles.metricValue, { color: colors.text }]}>
+                  {value}
+                </Text>
+              </Pressable>
+            ))}
+            {summaryQuery.data ? (
+              <View
+                style={[
+                  styles.metric,
+                  styles.totalsMetric,
+                  desktop && styles.totalsMetricDesktop,
+                  { backgroundColor: colors.surface, borderColor: colors.border },
+                ]}>
+                <Text style={[styles.metricLabel, styles.totalsTitle, { color: colors.text }]}>
+                  TOTALES
+                </Text>
+                <View style={styles.totalLine}>
+                  <Text style={[styles.totalLabel, { color: colors.textMuted }]}>Cobrado</Text>
+                  <Text style={[styles.totalValue, { color: colors.text }]}>
+                    {money(summaryQuery.data.total_payment_amount)}
+                  </Text>
+                </View>
+                <View style={styles.totalLine}>
+                  <Text style={[styles.totalLabel, { color: colors.textMuted }]}>En base</Text>
+                  <Text style={[styles.totalValue, { color: colors.text }]}>
+                    {money(summaryQuery.data.total_sale_amount)}
+                  </Text>
+                </View>
+                <View style={styles.totalLine}>
+                  <Text style={[styles.totalLabel, { color: colors.danger }]}>Observado</Text>
+                  <Text style={[styles.totalValue, { color: colors.danger }]}>
+                    {money(summaryQuery.data.total_difference)}
+                  </Text>
+                </View>
+              </View>
+            ) : null}
+          </View>
           <View style={styles.resultsSearch}>
             <TextField
               label="Buscar referencia"
@@ -189,7 +246,7 @@ export function ReconciliationScreen() {
               value={filters.external_reference}
             />
           </View>
-          {desktop ? (
+          {listQuery.data.items.length ? (desktop ? (
             <ScrollView
               contentContainerStyle={styles.tableScrollContent}
               horizontal
@@ -231,6 +288,11 @@ export function ReconciliationScreen() {
                 </Pressable>
               ))}
             </View>
+          )) : (
+            <FeedbackState
+              title="Sin resultados"
+              description="No hay registros para los filtros seleccionados."
+            />
           )}
           <View style={styles.pagination}>
             <Button disabled={filters.offset === 0} variant="secondary" onPress={() => setFilter('offset', Math.max(0, filters.offset - PAGE_SIZE))}>Anterior</Button>
@@ -239,6 +301,112 @@ export function ReconciliationScreen() {
           </View>
         </Card>
       ) : null}
+
+      </View>
+      </View>
+
+      <Modal
+        animationType="fade"
+        onRequestClose={() => setDifferencesVisible(false)}
+        transparent
+        visible={differencesVisible}>
+        <View style={styles.modalOverlay}>
+          <View style={[styles.differencesModal, { backgroundColor: colors.surface }]}>
+            <View style={styles.modalHeader}>
+              <View style={styles.modalHeaderCopy}>
+                <Text style={[styles.modalTitle, { color: colors.text }]}>Detalle de diferencias</Text>
+                <Text style={[styles.modalDescription, { color: colors.textMuted }]}>
+                  El total observado puede incluir pagos pendientes de revisión. La diferencia real
+                  solo compara pagos con una venta encontrada.
+                </Text>
+              </View>
+              <Button variant="ghost" onPress={() => setDifferencesVisible(false)}>Cerrar</Button>
+            </View>
+
+            {summaryQuery.data ? (
+              <>
+                <View style={styles.differenceCards}>
+                  {[
+                    {
+                      label: 'Diferencias de importe',
+                      amount: summaryQuery.data.amount_mismatch_amount,
+                      count: summaryQuery.data.amount_mismatch_count,
+                      status: 'amount_mismatch',
+                      background: colors.dangerSoft,
+                      valueColor: colors.danger,
+                    },
+                    {
+                      label: 'Importe sin venta',
+                      amount: summaryQuery.data.sale_not_found_amount,
+                      count: summaryQuery.data.sale_not_found_count,
+                      status: 'sale_not_found',
+                      background: colors.warningSoft,
+                      valueColor: colors.warning,
+                    },
+                    {
+                      label: 'Pendientes de revisión',
+                      amount: summaryQuery.data.pending_review_amount,
+                      count: summaryQuery.data.pending_review_count,
+                      status: 'pending_review',
+                      background: colors.warningSoft,
+                      valueColor: colors.warning,
+                    },
+                    {
+                      label: 'Diferencia total real',
+                      amount: summaryQuery.data.real_difference_amount,
+                      count: null,
+                      status: 'amount_mismatch',
+                      background: colors.successSoft,
+                      valueColor: colors.success,
+                    },
+                  ].map((item) => (
+                    <View
+                      key={item.label}
+                      style={[
+                        styles.differenceCard,
+                        { backgroundColor: item.background, borderColor: colors.border },
+                      ]}>
+                      <Text style={[styles.differenceLabel, { color: colors.textMuted }]}>
+                        {item.label}
+                      </Text>
+                      <Text
+                        adjustsFontSizeToFit
+                        numberOfLines={1}
+                        style={[styles.differenceAmount, { color: item.valueColor }]}>
+                        {money(item.amount)}
+                      </Text>
+                      {item.count === null ? (
+                        <Text style={[styles.differenceCount, { color: colors.textMuted }]}>
+                          Solo ventas comparables
+                        </Text>
+                      ) : (
+                        <>
+                          <Text style={[styles.differenceCount, { color: colors.textMuted }]}>
+                            {item.count} {item.count === 1 ? 'caso' : 'casos'}
+                          </Text>
+                          <Button
+                            disabled={item.count === 0}
+                            style={styles.viewRowsButton}
+                            variant="secondary"
+                            onPress={() => {
+                              setFilter('reconciliation_status', item.status);
+                              setDifferencesVisible(false);
+                            }}>
+                            Ver filas
+                          </Button>
+                        </>
+                      )}
+                    </View>
+                  ))}
+                </View>
+                <Text style={[styles.observedFooter, { color: colors.textMuted }]}>
+                  Total observado en la tarjeta: {money(summaryQuery.data.total_difference)}
+                </Text>
+              </>
+            ) : null}
+          </View>
+        </View>
+      </Modal>
 
       <PaymentDetailModal
         key={selected?.payment_id ?? 'reconciliation-detail'}
@@ -254,9 +422,22 @@ export function ReconciliationScreen() {
 }
 
 const styles = StyleSheet.create({
-  heading: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: spacing.md },
-  headingCopy: { flex: 1, minWidth: 220, gap: 3 },
-  title: { fontSize: 20, fontWeight: '700' },
+  workspace: { gap: spacing.lg },
+  workspaceDesktop: { paddingLeft: 304, alignItems: 'flex-start' },
+  mainContent: { gap: spacing.lg },
+  mainContentDesktop: { flex: 1, minWidth: 0 },
+  sidebarFilters: {
+    width: 280,
+    flexShrink: 0,
+    alignSelf: 'flex-start',
+    position: 'fixed' as 'relative',
+    top: 14,
+    zIndex: 2,
+    padding: 12,
+    gap: 7,
+    borderTopWidth: 1,
+    borderRadius: radii.md,
+  },
   muted: { fontSize: 12, lineHeight: 18 },
   mobileFilterBar: { borderWidth: 1, borderTopWidth: 4, borderRadius: radii.lg, padding: spacing.md, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.sm },
   filterSummary: { flex: 1, fontSize: 12, fontWeight: '600' },
@@ -265,11 +446,20 @@ const styles = StyleSheet.create({
   filterGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
   filterItem: { flexGrow: 1, flexShrink: 1, flexBasis: 210, minWidth: 180 },
   hint: { marginTop: spacing.sm, fontSize: 11 },
-  metricsCard: { padding: 0, overflow: 'hidden', borderTopWidth: 4 },
   metrics: { flexDirection: 'row', flexWrap: 'wrap' },
+  integratedMetrics: { width: '100%', overflow: 'hidden', borderWidth: 1, borderRadius: radii.md },
+  metricsDesktop: { flexWrap: 'nowrap' },
   metric: { flexGrow: 1, flexBasis: 150, minHeight: 72, padding: spacing.md, justifyContent: 'center', gap: 5, borderRightWidth: 1, borderBottomWidth: 1 },
+  metricDesktop: { flexBasis: 0, minWidth: 0, minHeight: 64, paddingVertical: 8, paddingHorizontal: 10 },
+  observedMetricDesktop: { flexGrow: 1.45, flexBasis: 135, minWidth: 135 },
   metricLabel: { fontSize: 11, fontWeight: '600' },
   metricValue: { fontSize: 19, fontWeight: '700' },
+  totalsMetric: { minWidth: 190, gap: 2 },
+  totalsMetricDesktop: { flexGrow: 1.05, flexBasis: 145, minWidth: 145, paddingVertical: 6 },
+  totalsTitle: { marginBottom: 1 },
+  totalLine: { flexDirection: 'row', justifyContent: 'space-between', gap: 5 },
+  totalLabel: { fontSize: 9, lineHeight: 11 },
+  totalValue: { fontSize: 10, lineHeight: 11, fontWeight: '700', textAlign: 'right' },
   tableScrollContent: { flexGrow: 1 },
   table: { minWidth: 945, width: '100%' },
   tableRow: { minHeight: 38, flexDirection: 'row', alignItems: 'center', borderBottomWidth: 1 },
@@ -283,4 +473,17 @@ const styles = StyleSheet.create({
   resultAmount: { fontSize: 18, fontWeight: '700' },
   rowBetween: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.md },
   pagination: { marginTop: spacing.sm, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.md },
+  modalOverlay: { flex: 1, padding: spacing.lg, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(0, 0, 0, 0.55)' },
+  differencesModal: { width: '100%', maxWidth: 900, padding: spacing.lg, borderRadius: radii.lg, gap: spacing.lg },
+  modalHeader: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: spacing.md },
+  modalHeaderCopy: { flex: 1, gap: spacing.sm },
+  modalTitle: { fontSize: 20, fontWeight: '700' },
+  modalDescription: { fontSize: 13, lineHeight: 19 },
+  differenceCards: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
+  differenceCard: { flexGrow: 1, flexBasis: 180, minWidth: 170, minHeight: 180, padding: spacing.md, borderWidth: 1, borderRadius: radii.md, alignItems: 'center', gap: spacing.sm },
+  differenceLabel: { minHeight: 32, fontSize: 11, fontWeight: '600', textAlign: 'center', textTransform: 'uppercase' },
+  differenceAmount: { width: '100%', fontSize: 18, fontWeight: '700', textAlign: 'center' },
+  differenceCount: { minHeight: 18, fontSize: 12, textAlign: 'center' },
+  viewRowsButton: { minHeight: 38, marginTop: 'auto', paddingVertical: 7 },
+  observedFooter: { fontSize: 12 },
 });

@@ -1,6 +1,7 @@
 import { z } from 'zod';
 
 import { apiRequest, apiRequestWithMeta } from '@/api/client';
+import { setNormalizedAmountParam } from '@/utils/amount-filter';
 
 export const settlementSchema = z.object({
   id: z.string(),
@@ -53,6 +54,8 @@ export type SettlementFilters = {
   provider?: string;
   status?: string;
   external_reference?: string;
+  min_amount?: string;
+  max_amount?: string;
   limit: number;
   offset: number;
 };
@@ -61,6 +64,10 @@ function query(filters: SettlementFilters, includePagination = true) {
   const params = new URLSearchParams();
   Object.entries(filters).forEach(([key, value]) => {
     if ((!includePagination && (key === 'limit' || key === 'offset')) || value === '' || value === undefined) return;
+    if (key === 'min_amount' || key === 'max_amount') {
+      setNormalizedAmountParam(params, key, value);
+      return;
+    }
     params.set(key, String(value));
   });
   return params.toString();

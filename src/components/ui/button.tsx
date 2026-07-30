@@ -57,7 +57,8 @@ export function Button({
       style={({ pressed }) => [
         styles.base,
         {
-          backgroundColor: pressed ? colors.primarySoft : palette.background,
+          backgroundColor:
+            pressed && variant !== 'primary' ? colors.primarySoft : palette.background,
           borderColor: palette.border,
           opacity: isDisabled ? 0.55 : 1,
         },

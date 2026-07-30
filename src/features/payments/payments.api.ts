@@ -1,6 +1,7 @@
 import { z } from 'zod';
 
 import { apiRequest, apiRequestWithMeta } from '@/api/client';
+import { normalizeAmountFilter, setNormalizedAmountParam } from '@/utils/amount-filter';
 
 export const paymentSchema = z.object({
   id: z.string(),
@@ -109,16 +110,24 @@ export type PaymentFilters = {
   card_brand?: string;
   cashier_id?: string;
   external_reference?: string;
+  min_amount?: string;
+  max_amount?: string;
   from: string;
   to: string;
   limit: number;
   offset: number;
 };
 
+export const normalizePaymentAmountFilter = normalizeAmountFilter;
+
 function query(filters: PaymentFilters, includePagination = true) {
   const params = new URLSearchParams();
   Object.entries(filters).forEach(([key, value]) => {
     if ((!includePagination && (key === 'limit' || key === 'offset')) || value === '' || value === undefined) return;
+    if (key === 'min_amount' || key === 'max_amount') {
+      setNormalizedAmountParam(params, key, value);
+      return;
+    }
     params.set(key, String(value));
   });
   return params.toString();

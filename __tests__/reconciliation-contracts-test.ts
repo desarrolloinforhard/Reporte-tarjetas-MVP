@@ -28,6 +28,8 @@ describe('contratos de conciliación', () => {
       sale_not_found_count: 1,
       amount_mismatch_count: 1,
       pending_review_count: 3,
+      total_payment_amount: 889350,
+      total_sale_amount: 886650,
       total_difference: 2700,
       total_exact: true,
       reconciliation_mode: 'fixture',

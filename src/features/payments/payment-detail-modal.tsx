@@ -11,7 +11,7 @@ import { formatDateTime } from '@/utils/date-format';
 type Tab = 'summary' | 'products' | 'payments' | 'technical';
 
 const providerLabel = (value: string) =>
-  ({ clover: 'Clover', mercadopago: 'Mercado Pago', payway: 'Payway' })[value] || value;
+  ({ clover: 'Clover', mercadopago: 'Mercado Pago' })[value] || value;
 const money = (value: number) =>
   new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS' }).format(value);
 const dateTime = formatDateTime;
@@ -206,7 +206,7 @@ export function PaymentDetailModal({
                         ]}>
                         <Text
                           style={{
-                            color: tab === key ? colors.primary : colors.text,
+                            color: tab === key ? '#102018' : colors.text,
                             fontWeight: tab === key ? '800' : '600',
                           }}>
                           {label}

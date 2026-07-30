@@ -1,5 +1,5 @@
 import { PropsWithChildren, ReactNode } from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleProp, StyleSheet, Text, View, ViewStyle } from 'react-native';
 
 import { spacing, typography } from '@/theme/tokens';
 import { useAppTheme } from '@/theme/theme-provider';
@@ -10,6 +10,7 @@ type ScreenFrameProps = PropsWithChildren<{
   eyebrow?: string;
   actions?: ReactNode;
   hideHeader?: boolean;
+  contentStyle?: StyleProp<ViewStyle>;
 }>;
 
 export function ScreenFrame({
@@ -18,6 +19,7 @@ export function ScreenFrame({
   eyebrow = 'Reportes de Tarjetas',
   actions,
   hideHeader = false,
+  contentStyle,
   children,
 }: ScreenFrameProps) {
   const { colors } = useAppTheme();
@@ -26,7 +28,7 @@ export function ScreenFrame({
     <ScrollView
       contentContainerStyle={styles.scrollContent}
       style={[styles.scroll, { backgroundColor: colors.background }]}>
-      <View style={styles.container}>
+      <View style={[styles.container, contentStyle]}>
         {!hideHeader ? (
           <View style={styles.header}>
             <View style={styles.heading}>
