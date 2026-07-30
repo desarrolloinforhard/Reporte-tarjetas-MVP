@@ -3,7 +3,10 @@ import { Platform } from 'react-native';
 
 import { ApiError } from '@/api/api-error';
 import { queryClient } from '@/config/query-client';
-import { setAccessToken } from '@/features/auth/auth-token-store';
+import {
+  setAccessToken,
+  subscribeToUnauthenticated,
+} from '@/features/auth/auth-token-store';
 import {
   getCurrentSession,
   getCurrentUser,
@@ -47,6 +50,12 @@ export function SessionProvider({ children }: PropsWithChildren) {
     setUser(null);
     queryClient.clear();
   }
+
+  useEffect(() => {
+    return subscribeToUnauthenticated(() => {
+      void clearSession();
+    });
+  }, []);
 
   useEffect(() => {
     let active = true;

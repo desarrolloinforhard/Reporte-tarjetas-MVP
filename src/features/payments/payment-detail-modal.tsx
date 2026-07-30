@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Payment, PaymentDetail } from '@/features/payments/payments.api';
 import { breakpoints, radii, spacing } from '@/theme/tokens';
 import { useAppTheme } from '@/theme/theme-provider';
+import { formatDateTime } from '@/utils/date-format';
 
 type Tab = 'summary' | 'products' | 'payments' | 'technical';
 
@@ -13,12 +14,7 @@ const providerLabel = (value: string) =>
   ({ clover: 'Clover', mercadopago: 'Mercado Pago', payway: 'Payway' })[value] || value;
 const money = (value: number) =>
   new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS' }).format(value);
-const dateTime = (value: string) =>
-  new Intl.DateTimeFormat('es-AR', {
-    dateStyle: 'short',
-    timeStyle: 'short',
-    hour12: false,
-  }).format(new Date(value));
+const dateTime = formatDateTime;
 const verdict = (status: string) => {
   if (status === 'matched') return { label: 'Conciliado', tone: 'success' as const };
   if (status === 'sale_not_found') return { label: 'Venta no encontrada', tone: 'danger' as const };
@@ -87,6 +83,8 @@ export function PaymentDetailModal({
   };
   const isAttempt = data?.payment.current_payment_applied === false;
   const isRejectedAttempt = isAttempt && data?.payment.status === 'rejected';
+  const isCurrentDayPendingSale =
+    Boolean(data && !data.sale && data.payment_summary.status === 'pending_review') && !isAttempt;
   const status = isRejectedAttempt
     ? { label: 'Rechazado · intento no aplicado', tone: 'danger' as const }
     : data
@@ -164,7 +162,10 @@ export function PaymentDetailModal({
                     style={[
                       styles.metric,
                       {
-                        backgroundColor: isAttempt ? attemptBackground : colors.successSoft,
+                        backgroundColor:
+                          isAttempt || isCurrentDayPendingSale
+                            ? attemptBackground
+                            : colors.successSoft,
                         borderColor: colors.border,
                       },
                     ]}>
@@ -172,7 +173,12 @@ export function PaymentDetailModal({
                     <Text
                       style={[
                         styles.metricValue,
-                        { color: isAttempt ? attemptColor : colors.success },
+                        {
+                          color:
+                            isAttempt || isCurrentDayPendingSale
+                              ? attemptColor
+                              : colors.success,
+                        },
                       ]}>
                       {money(Number(value))}
                     </Text>
@@ -265,11 +271,27 @@ export function PaymentDetailModal({
                     <View
                       style={[
                         styles.warning,
-                        { backgroundColor: colors.dangerSoft, borderColor: colors.danger },
+                        {
+                          backgroundColor: isCurrentDayPendingSale
+                            ? colors.warningSoft
+                            : colors.dangerSoft,
+                          borderColor: isCurrentDayPendingSale
+                            ? colors.warning
+                            : colors.danger,
+                        },
                       ]}>
-                      <Badge label="Venta no encontrada" tone="danger" />
+                      <Badge
+                        label={
+                          isCurrentDayPendingSale
+                            ? 'Pendiente de cierre de caja'
+                            : 'Venta no encontrada'
+                        }
+                        tone={isCurrentDayPendingSale ? 'warning' : 'danger'}
+                      />
                       <Text style={{ color: colors.text }}>
-                        No hay una venta asociada para esta referencia.
+                        {isCurrentDayPendingSale
+                          ? 'La venta puede aparecer cuando cierre la caja del día. Este pago queda pendiente de revisión y no se considera una diferencia definitiva.'
+                          : 'No hay una venta asociada para esta referencia.'}
                       </Text>
                     </View>
                   )

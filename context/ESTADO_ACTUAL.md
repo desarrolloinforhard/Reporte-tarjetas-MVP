@@ -1,6 +1,6 @@
 # Estado actual
 
-Última actualización: 2026-07-28.
+Última actualización: 2026-07-30.
 
 ## Implementado
 
@@ -47,12 +47,18 @@
   paginación y detalle universal.
 - Presentación responsive de Pagos: tabla en web/tablet y tarjetas en móvil.
 - Contratos Zod y pruebas automatizadas para listado, resumen, catálogos y detalle.
+- Liquidaciones estimadas, Conciliación y Calidad de datos funcionan sobre el
+  backend aislado, con filtros, búsqueda por referencia, detalle y diseño responsive.
+- Login web integrado con `POST /api/v1/auth/login` y cierre de sesión con
+  `POST /api/v1/auth/logout`, usando la cookie opaca `ih_reportes_session`.
+- El login legacy del panel y su cookie `webserver_admin_auth` permanecen
+  separados de la autenticación de ReportesTarjetasApp.
 
 ## Validación realizada
 
 - `npm run lint`: aprobado.
 - `npm run typecheck`: aprobado.
-- `npm run test`: 11 pruebas aprobadas.
+- `npm run test`: 20 pruebas aprobadas.
 - `npm run web:export`: aprobado.
 - Configuración pública de Expo: aprobada.
 - `npx expo-doctor`: 20/20 controles aprobados.

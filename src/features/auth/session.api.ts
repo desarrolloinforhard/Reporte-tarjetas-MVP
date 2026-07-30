@@ -25,13 +25,24 @@ export function getCurrentUser(): Promise<CurrentUser> {
 }
 
 export function login(username: string, password: string): Promise<AuthResult> {
-  return apiRequest('/sessions/login', authResultSchema, {
+  return loginForPlatform(Platform.OS, username, password);
+}
+
+export function loginForPlatform(
+  platform: typeof Platform.OS,
+  username: string,
+  password: string,
+): Promise<AuthResult> {
+  const webClient = platform === 'web';
+  const path = webClient ? '/auth/login' : '/sessions/login';
+
+  return apiRequest(path, authResultSchema, {
     method: 'POST',
     credentials: 'include',
     body: {
       username,
       password,
-      client_type: clientType,
+      client_type: webClient ? 'web' : 'native',
     },
   });
 }
@@ -48,12 +59,26 @@ export function refreshSession(refreshToken?: string | null): Promise<AuthResult
 }
 
 export function logoutSession(refreshToken?: string | null) {
-  return apiRequest('/sessions/logout', logoutResultSchema, {
+  return logoutSessionForPlatform(Platform.OS, refreshToken);
+}
+
+export function logoutSessionForPlatform(
+  platform: typeof Platform.OS,
+  refreshToken?: string | null,
+) {
+  const webClient = platform === 'web';
+  const path = webClient ? '/auth/logout' : '/sessions/logout';
+
+  return apiRequest(path, logoutResultSchema, {
     method: 'POST',
     credentials: 'include',
-    body: {
-      client_type: clientType,
-      ...(refreshToken ? { refresh_token: refreshToken } : {}),
-    },
+    ...(webClient
+      ? {}
+      : {
+          body: {
+            client_type: clientType,
+            ...(refreshToken ? { refresh_token: refreshToken } : {}),
+          },
+        }),
   });
 }

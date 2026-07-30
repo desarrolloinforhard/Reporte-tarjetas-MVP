@@ -29,6 +29,7 @@ import {
 import { PaymentDetailModal } from '@/features/payments/payment-detail-modal';
 import { breakpoints, radii, spacing } from '@/theme/tokens';
 import { useAppTheme } from '@/theme/theme-provider';
+import { formatDate, formatDateTime } from '@/utils/date-format';
 
 const PAGE_SIZE = 20;
 const providers: Record<string, string> = {
@@ -61,14 +62,7 @@ function money(value: number) {
 }
 
 function dateTime(value: string) {
-  return new Intl.DateTimeFormat('es-AR', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: false,
-  }).format(new Date(value));
+  return formatDateTime(value);
 }
 
 function isoDate(date: Date) {
@@ -118,14 +112,14 @@ function DatePickerField({
     <View style={styles.selectGroup}>
       <Text style={[styles.fieldLabel, { color: colors.text }]}>{label}</Text>
       <Pressable
-        accessibilityLabel={`${label}: ${value}. Abrir calendario`}
+        accessibilityLabel={`${label}: ${formatDate(value)}. Abrir calendario`}
         accessibilityRole="button"
         onPress={showCalendar}
         style={[
           styles.selectField,
           { backgroundColor: colors.surface, borderColor: colors.borderStrong },
         ]}>
-        <Text style={[styles.selectValue, { color: colors.text }]}>{value}</Text>
+        <Text style={[styles.selectValue, { color: colors.text }]}>{formatDate(value)}</Text>
         <Ionicons color={colors.primary} name="calendar-outline" size={18} />
       </Pressable>
       <Modal
@@ -368,7 +362,9 @@ function PaymentRow({
             <Badge label={payment.status_label} tone={tone(payment.status)} />
           </View>
           <View style={styles.rowBetween}>
-            <Text style={[styles.muted, { color: colors.textMuted }]}>{payment.created_date}</Text>
+            <Text style={[styles.muted, { color: colors.textMuted }]}>
+              {formatDate(payment.created_date)}
+            </Text>
             <Text style={[styles.muted, { color: colors.textMuted }]}>{payment.branch_name}</Text>
           </View>
           <View style={styles.rowBetween}>
@@ -500,7 +496,7 @@ export function PaymentsScreen() {
           <View style={styles.mobileFiltersSummary}>
             <Text style={[styles.mobileFiltersTitle, { color: colors.text }]}>Filtros</Text>
             <Text numberOfLines={1} style={[styles.mobileFiltersPeriod, { color: colors.textMuted }]}>
-              {filters.from} — {filters.to}
+              {formatDate(filters.from)} — {formatDate(filters.to)}
             </Text>
           </View>
           <Button

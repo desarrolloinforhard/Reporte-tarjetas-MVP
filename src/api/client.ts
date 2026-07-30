@@ -3,7 +3,10 @@ import { z } from 'zod';
 import { ApiError } from '@/api/api-error';
 import { apiResponseSchema } from '@/api/api-response';
 import { appEnvironment } from '@/config/environment';
-import { getAccessToken } from '@/features/auth/auth-token-store';
+import {
+  getAccessToken,
+  notifyUnauthenticated,
+} from '@/features/auth/auth-token-store';
 
 type RequestOptions = Omit<RequestInit, 'body'> & {
   body?: unknown;
@@ -63,6 +66,9 @@ export async function apiRequestWithMeta<T extends z.ZodType>(
   };
 
   if (!envelope.ok && envelope.error) {
+    if (envelope.error.code === 'UNAUTHENTICATED' && !path.includes('/auth/')) {
+      notifyUnauthenticated();
+    }
     throw new ApiError(
       envelope.error.code,
       envelope.error.message,

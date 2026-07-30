@@ -11,6 +11,7 @@ import { FeedbackState } from '@/components/ui/feedback-state';
 import { getDashboardData } from '@/features/dashboard/dashboard.api';
 import { radii, spacing } from '@/theme/tokens';
 import { useAppTheme } from '@/theme/theme-provider';
+import { formatDate } from '@/utils/date-format';
 
 type Period = 'today' | 'week' | 'month';
 
@@ -318,7 +319,7 @@ export function DashboardScreen() {
                 Backend de desarrollo conectado
               </Text>
               <Text style={[styles.noticeDescription, { color: colors.textMuted }]}>
-                Datos sintéticos del período {range.from} al {range.to}.
+                Datos sintéticos del período {formatDate(range.from)} al {formatDate(range.to)}.
               </Text>
             </View>
             <Badge label="Ambiente seguro" tone="info" />

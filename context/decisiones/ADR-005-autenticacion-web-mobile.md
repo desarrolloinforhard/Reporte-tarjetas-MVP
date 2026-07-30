@@ -81,3 +81,19 @@ frontend.
 - Los usuarios, permisos y sesiones actuales son exclusivamente sintéticos.
 - El almacenamiento en memoria es deliberado para desarrollo y se reemplazará
   por persistencia revocable antes de staging.
+
+## Integración con credenciales administrativas en desarrollo
+
+- El backend agregó de forma aditiva `POST /api/v1/auth/login` y
+  `POST /api/v1/auth/logout` para la aplicación web.
+- El login valida en servidor las credenciales configuradas mediante
+  `ROOT_ADMIN_USER` y `ROOT_ADMIN_PASSWORD`; el frontend no conoce valores
+  predeterminados ni persiste las credenciales.
+- La sesión web utiliza la cookie opaca `ih_reportes_session`, separada de
+  `webserver_admin_auth`, que continúa siendo exclusiva del panel legacy.
+- `GET /api/v1/sessions/current` y `GET /api/v1/users/me` validan la misma sesión
+  API creada por el nuevo login.
+- Todas las solicitudes web conservan `credentials: include`.
+- Android e iOS mantienen temporalmente el contrato nativo de
+  `/api/v1/sessions/*`; el nuevo endpoint administrativo se integra solamente
+  en web hasta disponer de un contrato nativo equivalente validado.
