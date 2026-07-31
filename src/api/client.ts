@@ -2,7 +2,7 @@ import { z } from 'zod';
 
 import { ApiError } from '@/api/api-error';
 import { apiResponseSchema } from '@/api/api-response';
-import { appEnvironment } from '@/config/environment';
+import { getApiBaseUrl } from '@/config/runtime-api';
 import {
   getAccessToken,
   notifyUnauthenticated,
@@ -36,7 +36,7 @@ export async function apiRequestWithMeta<T extends z.ZodType>(
 
   let response: Response;
   try {
-    response = await fetch(`${appEnvironment.apiBaseUrl}${path}`, {
+    response = await fetch(`${getApiBaseUrl()}${path}`, {
       credentials: 'include',
       ...options,
       headers,

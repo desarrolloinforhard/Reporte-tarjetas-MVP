@@ -3,14 +3,17 @@ import { useMemo, useState } from 'react';
 import { Modal, Platform, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 
 import { Badge } from '@/components/ui/badge';
+import { AmountField } from '@/components/ui/amount-field';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { DatePickerField } from '@/components/ui/date-picker-field';
+import { ExportDialog } from '@/components/ui/export-dialog';
 import { FeedbackState } from '@/components/ui/feedback-state';
 import { SelectField } from '@/components/ui/select-field';
 import { TextField } from '@/components/ui/text-field';
 import { ScreenFrame } from '@/components/layout/screen-frame';
 import {
+  getAllSettlements,
   getSettlements,
   getSettlementsSummary,
   Settlement,
@@ -19,6 +22,7 @@ import {
 import { breakpoints, radii, spacing } from '@/theme/tokens';
 import { useAppTheme } from '@/theme/theme-provider';
 import { formatDate } from '@/utils/date-format';
+import { exportCsv } from '@/utils/file-export';
 
 const PAGE_SIZE = 20;
 const providers: Record<string, string> = {
@@ -118,6 +122,7 @@ export function SettlementsScreen() {
   const desktop = width >= breakpoints.tablet;
   const filtersSidebar = Platform.OS === 'web' && width >= breakpoints.desktop;
   const [filtersVisible, setFiltersVisible] = useState(false);
+  const [exportVisible, setExportVisible] = useState(false);
   const [selected, setSelected] = useState<Settlement | null>(null);
   const [filters, setFilters] = useState<SettlementFilters>({
     from: daysAgo(30),
@@ -151,6 +156,25 @@ export function SettlementsScreen() {
       [key]: value,
       offset: key === 'offset' ? Number(value) : 0,
     }));
+  async function handleExport() {
+    const rows = await getAllSettlements(filters);
+    if (!rows.length) throw new Error('No hay liquidaciones para exportar.');
+    await exportCsv(`liquidaciones_${filters.from}_${filters.to}`, [
+      { label: 'Fecha liquidación', value: (row: Settlement) => date(row.settlement_date) },
+      { label: 'Fecha transacción', value: (row: Settlement) => date(row.transaction_date) },
+      { label: 'Proveedor', value: (row: Settlement) => providers[row.provider] || row.provider },
+      { label: 'Tipo', value: (row: Settlement) => transactionLabel(row.transaction_type) },
+      { label: 'Referencia', value: (row: Settlement) => row.external_reference },
+      { label: 'Bruto', value: (row: Settlement) => row.gross_amount.toFixed(2) },
+      { label: 'Comisión', value: (row: Settlement) => row.fee_amount.toFixed(2) },
+      { label: 'Impuestos', value: (row: Settlement) => row.tax_amount.toFixed(2) },
+      { label: 'Devuelto', value: (row: Settlement) => row.refund_amount.toFixed(2) },
+      { label: 'Neto', value: (row: Settlement) => row.net_amount.toFixed(2) },
+      { label: 'Estado', value: (row: Settlement) => row.status_label },
+      { label: 'Sucursal', value: (row: Settlement) => row.branch_name },
+      { label: 'Terminal', value: (row: Settlement) => row.terminal_name },
+    ], rows);
+  }
   const summary = summaryQuery.data;
   const metrics = summary
     ? [
@@ -167,16 +191,6 @@ export function SettlementsScreen() {
       description="Seguimiento de acreditaciones estimadas desde pagos del ambiente aislado."
       hideHeader
       title="Liquidaciones">
-      <View style={[styles.modeRow, filtersSidebar && styles.headingWithSidebar]}>
-        <View style={styles.modeCopy}>
-          <Text style={[styles.modeTitle, { color: colors.text }]}>Liquidaciones estimadas</Text>
-          <Text style={[styles.muted, { color: colors.textMuted }]}>
-            Reportes reales de Mercado Pago se habilitarán únicamente en staging.
-          </Text>
-        </View>
-        <Badge label="Sin llamadas externas" tone="info" />
-      </View>
-
       {!desktop ? (
         <View style={[styles.mobileFilterBar, { backgroundColor: colors.surface, borderColor: colors.accent }]}>
           <Text style={[styles.filterSummary, { color: colors.text }]}>
@@ -216,8 +230,7 @@ export function SettlementsScreen() {
               />
             </View>
             <View style={styles.filterItem}>
-              <TextField
-                keyboardType="decimal-pad"
+              <AmountField
                 label="Importe mínimo"
                 onChangeText={(value) => setFilter('min_amount', value)}
                 placeholder="Ej.: 10.000"
@@ -225,8 +238,7 @@ export function SettlementsScreen() {
               />
             </View>
             <View style={styles.filterItem}>
-              <TextField
-                keyboardType="decimal-pad"
+              <AmountField
                 label="Importe máximo"
                 onChangeText={(value) => setFilter('max_amount', value)}
                 placeholder="Ej.: 124.500,50"
@@ -275,7 +287,6 @@ export function SettlementsScreen() {
       ) : null}
       {listQuery.data?.items.length ? (
         <Card
-          accessory={<Badge label={`${listQuery.data.total} resultados`} tone="info" />}
           style={{ ...styles.resultsCard, borderColor: colors.accent }}
           title="Liquidaciones">
           <View
@@ -300,12 +311,15 @@ export function SettlementsScreen() {
             ))}
           </View>
           <View style={styles.resultsSearch}>
-            <TextField
-              label="Buscar referencia"
-              onChangeText={(value) => setFilter('external_reference', value)}
-              placeholder="Número de referencia"
-              value={filters.external_reference}
-            />
+            <View style={styles.resultsSearchField}>
+              <TextField
+                label="Buscar referencia"
+                onChangeText={(value) => setFilter('external_reference', value)}
+                placeholder="Número de referencia"
+                value={filters.external_reference}
+              />
+            </View>
+            <Button disabled={!listQuery.data.total} onPress={() => setExportVisible(true)} variant="secondary">Exportar</Button>
           </View>
           {desktop ? (
             <ScrollView
@@ -391,6 +405,8 @@ export function SettlementsScreen() {
       </View>
       </View>
 
+      <ExportDialog formats={['csv']} onClose={() => setExportVisible(false)} onExport={handleExport} visible={exportVisible} />
+
       <Modal animationType="fade" onRequestClose={() => setSelected(null)} transparent visible={Boolean(selected)}>
         <Pressable onPress={() => setSelected(null)} style={[styles.backdrop, { backgroundColor: colors.overlay }]}>
           <Pressable
@@ -472,7 +488,6 @@ export function SettlementsScreen() {
 }
 
 const styles = StyleSheet.create({
-  headingWithSidebar: { marginLeft: 304 },
   workspace: { gap: spacing.lg },
   workspaceDesktop: { paddingLeft: 304, alignItems: 'flex-start' },
   mainContent: { gap: spacing.lg },
@@ -482,16 +497,13 @@ const styles = StyleSheet.create({
     flexShrink: 0,
     alignSelf: 'flex-start',
     position: 'fixed' as 'relative',
-    top: 102,
+    top: 33,
     zIndex: 2,
     padding: 12,
     gap: 7,
     borderTopWidth: 1,
     borderRadius: radii.md,
   },
-  modeRow: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: spacing.md },
-  modeCopy: { flex: 1, minWidth: 240, gap: 3 },
-  modeTitle: { fontSize: 18, fontWeight: '700' },
   muted: { fontSize: 12, lineHeight: 18 },
   mobileFilterBar: { borderWidth: 1, borderTopWidth: 4, borderRadius: radii.lg, padding: spacing.md, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.sm },
   filterSummary: { flex: 1, fontSize: 12, fontWeight: '600' },
@@ -509,7 +521,8 @@ const styles = StyleSheet.create({
   metricLabel: { fontSize: 12, fontWeight: '600' },
   metricValue: { fontSize: 19, fontWeight: '700' },
   resultsCard: { borderTopWidth: 4 },
-  resultsSearch: { width: '100%' },
+  resultsSearch: { width: '100%', flexDirection: 'row', flexWrap: 'wrap', alignItems: 'flex-end', gap: spacing.sm },
+  resultsSearchField: { flex: 1, minWidth: 220 },
   tableScrollContent: { flexGrow: 1 },
   tableViewport: { width: '100%', maxWidth: '100%', alignSelf: 'stretch' },
   table: { minWidth: 1120, width: '100%', flexGrow: 1 },

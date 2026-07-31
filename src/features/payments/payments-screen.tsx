@@ -15,11 +15,14 @@ import {
 
 import { ScreenFrame } from '@/components/layout/screen-frame';
 import { Badge } from '@/components/ui/badge';
+import { AmountField } from '@/components/ui/amount-field';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { ExportDialog } from '@/components/ui/export-dialog';
 import { FeedbackState } from '@/components/ui/feedback-state';
 import { TextField } from '@/components/ui/text-field';
 import {
+  getAllPayments,
   getPaymentCatalogs,
   getPaymentDetail,
   getPayments,
@@ -31,6 +34,7 @@ import { PaymentDetailModal } from '@/features/payments/payment-detail-modal';
 import { breakpoints, radii, spacing, typography } from '@/theme/tokens';
 import { useAppTheme } from '@/theme/theme-provider';
 import { formatDate, formatDateTime } from '@/utils/date-format';
+import { exportCsv } from '@/utils/file-export';
 
 const PAGE_SIZE = 20;
 const providers: Record<string, string> = {
@@ -462,6 +466,7 @@ export function PaymentsScreen() {
     offset: 0,
   });
   const [mobileFiltersVisible, setMobileFiltersVisible] = useState(false);
+  const [exportVisible, setExportVisible] = useState(false);
   const [selected, setSelected] = useState<Payment | null>(null);
   const filterKey = useMemo(() => JSON.stringify(filters), [filters]);
   const paymentsQuery = useQuery({
@@ -484,6 +489,24 @@ export function PaymentsScreen() {
       [key]: value,
       offset: key === 'offset' ? Number(value) : 0,
     }));
+  async function handleExport() {
+    const rows = await getAllPayments(filters);
+    if (!rows.length) throw new Error('No hay pagos para exportar.');
+    await exportCsv(`pagos_${filters.from}_${filters.to}`, [
+      { label: 'Fecha', value: (row: Payment) => formatDateTime(row.created_at) },
+      { label: 'Proveedor', value: (row: Payment) => providers[row.provider] || row.provider },
+      { label: 'Estado', value: (row: Payment) => row.status_label },
+      { label: 'Importe', value: (row: Payment) => row.amount.toFixed(2) },
+      { label: 'Devuelto', value: (row: Payment) => row.refund_amount.toFixed(2) },
+      { label: 'Método', value: (row: Payment) => row.payment_method },
+      { label: 'Tarjeta', value: (row: Payment) => row.card_brand },
+      { label: 'Últimos 4', value: (row: Payment) => row.card_last_four },
+      { label: 'Terminal', value: (row: Payment) => row.terminal_name },
+      { label: 'Sucursal', value: (row: Payment) => row.branch_name },
+      { label: 'Cajero', value: (row: Payment) => row.cashier_name },
+      { label: 'Referencia', value: (row: Payment) => row.external_reference },
+    ], rows);
+  }
   const metrics = summaryQuery.data
     ? ([
         ['Pagos', String(summaryQuery.data.payments_count), 'neutral'],
@@ -584,8 +607,7 @@ export function PaymentsScreen() {
             />
           </View>
           <View style={styles.filterItem}>
-            <TextField
-              keyboardType="decimal-pad"
+            <AmountField
               label="Importe mínimo"
               onChangeText={(value) => setFilter('min_amount', value)}
               placeholder="Ej.: 10.000"
@@ -594,8 +616,7 @@ export function PaymentsScreen() {
             />
           </View>
           <View style={styles.filterItem}>
-            <TextField
-              keyboardType="decimal-pad"
+            <AmountField
               label="Importe máximo"
               onChangeText={(value) => setFilter('max_amount', value)}
               placeholder="Ej.: 124.500,50"
@@ -783,13 +804,14 @@ export function PaymentsScreen() {
             ))}
           </View>
           <View style={styles.operationsSearch}>
-            <TextField
-              label="Buscar referencia"
-              onChangeText={(value) => setFilter('external_reference', value)}
-              placeholder="Número de referencia"
-              style={styles.compactInput}
-              value={filters.external_reference}
-            />
+            <View style={styles.operationsSearchField}><TextField
+                label="Buscar referencia"
+                onChangeText={(value) => setFilter('external_reference', value)}
+                placeholder="Número de referencia"
+                style={styles.compactInput}
+                value={filters.external_reference}
+              /></View>
+            <Button disabled={!paymentsQuery.data.total} onPress={() => setExportVisible(true)} variant="secondary">Exportar</Button>
           </View>
           {desktop ? (
             <ScrollView
@@ -893,6 +915,8 @@ export function PaymentsScreen() {
       ) : null}
       </View>
       </View>
+
+      <ExportDialog formats={['csv']} onClose={() => setExportVisible(false)} onExport={handleExport} visible={exportVisible} />
 
       <PaymentDetailModal
         data={detailQuery.data}
@@ -1103,7 +1127,8 @@ const styles = StyleSheet.create({
   metricLabel: { fontSize: 11, fontWeight: '700' },
   paymentList: { gap: spacing.sm },
   operationsCard: { borderTopWidth: 1 },
-  operationsSearch: { width: '100%' },
+  operationsSearch: { width: '100%', flexDirection: 'row', flexWrap: 'wrap', alignItems: 'flex-end', gap: spacing.sm },
+  operationsSearchField: { flex: 1, minWidth: 220 },
   tableRows: { gap: 1 },
   paymentCard: { padding: spacing.md },
   paymentAmount: { fontSize: 18, fontWeight: '900' },

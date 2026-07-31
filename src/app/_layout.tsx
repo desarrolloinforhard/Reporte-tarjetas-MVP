@@ -1,11 +1,12 @@
 import { focusManager, QueryClientProvider } from '@tanstack/react-query';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { ActivityIndicator, AppState, Platform, StyleSheet, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { queryClient } from '@/config/query-client';
+import { initializeRuntimeApiBaseUrl } from '@/config/runtime-api';
 import { SessionProvider, useSession } from '@/features/auth/session-provider';
 import { AppThemeProvider, useAppTheme } from '@/theme/theme-provider';
 
@@ -37,6 +38,12 @@ function RootNavigator() {
 }
 
 export default function RootLayout() {
+  const [runtimeReady, setRuntimeReady] = useState(false);
+
+  useEffect(() => {
+    void initializeRuntimeApiBaseUrl().finally(() => setRuntimeReady(true));
+  }, []);
+
   useEffect(() => {
     if (Platform.OS === 'web') return;
     const subscription = AppState.addEventListener('change', (status) => {
@@ -44,6 +51,10 @@ export default function RootLayout() {
     });
     return () => subscription.remove();
   }, []);
+
+  if (!runtimeReady) {
+    return <View style={styles.loading}><ActivityIndicator size="large" /></View>;
+  }
 
   return (
     <SafeAreaProvider>

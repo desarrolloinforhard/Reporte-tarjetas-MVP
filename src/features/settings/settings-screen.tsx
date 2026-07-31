@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Modal, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 
 import { getHealth } from '@/api/health.api';
 import { ScreenFrame } from '@/components/layout/screen-frame';
@@ -8,8 +8,11 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { appEnvironment } from '@/config/environment';
+import { queryClient } from '@/config/query-client';
+import { getApiBaseUrl } from '@/config/runtime-api';
 import { useSession } from '@/features/auth/session-provider';
-import { radii, spacing } from '@/theme/tokens';
+import { TechnicalSettingsModal } from '@/features/settings/technical-settings-modal';
+import { breakpoints, radii, spacing } from '@/theme/tokens';
 import { ThemePreference, useAppTheme } from '@/theme/theme-provider';
 
 const themeOptions: { label: string; value: ThemePreference; description: string }[] = [
@@ -18,11 +21,13 @@ const themeOptions: { label: string; value: ThemePreference; description: string
   { label: 'Oscuro', value: 'dark', description: 'Ideal para ambientes con poca luz' },
 ];
 
-export function SettingsScreen() {
+function SettingsContent({ compact = false }: { compact?: boolean }) {
   const { colors, preference, savedPreference, savePreference, setPreference } = useAppTheme();
   const { logout, user, loading } = useSession();
   const [savingTheme, setSavingTheme] = useState(false);
   const [themeSaved, setThemeSaved] = useState(false);
+  const [technicalVisible, setTechnicalVisible] = useState(false);
+  const [configuredApiUrl, setConfiguredApiUrl] = useState(getApiBaseUrl);
   const hasThemeChanges = preference !== savedPreference;
   const healthQuery = useQuery({
     queryKey: ['health'],
@@ -53,14 +58,10 @@ export function SettingsScreen() {
   }
 
   return (
-    <ScreenFrame
-      actions={<Badge label={appEnvironment.name} tone="info" />}
-      description="Preferencias visuales, entorno y diagnóstico de la aplicación."
-      title="Configuración">
-      <View style={styles.grid}>
+      <View style={[styles.grid, compact && styles.compactGrid]}>
         <Card
           description="Elegí una apariencia y guardala para conservarla al reiniciar."
-          style={styles.card}
+          style={{ ...styles.card, ...(compact ? styles.compactCard : {}) }}
           title="Apariencia">
           <View style={styles.optionList}>
             {themeOptions.map((option) => {
@@ -76,6 +77,7 @@ export function SettingsScreen() {
                   }}
                   style={({ pressed }) => [
                     styles.option,
+                    compact && styles.compactOption,
                     {
                       backgroundColor: active
                         ? colors.primarySoft
@@ -128,19 +130,19 @@ export function SettingsScreen() {
             />
           }
           description="Información pública y no sensible"
-          style={styles.card}
+          style={{ ...styles.card, ...(compact ? styles.compactCard : {}) }}
           title="Diagnóstico">
           {[
             ['Aplicación', '0.1.0'],
             ['Ambiente', appEnvironment.name],
-            ['API configurada', appEnvironment.apiBaseUrl],
+            ['API configurada', configuredApiUrl],
             ['Estado de API', apiConnected ? healthQuery.data.status : 'No disponible'],
             ['Base de datos', databaseLabel],
             ['Última comprobación', checkedAt],
             ['Actualización', 'Automática cada 5 segundos'],
             ['Plataformas', 'Web · Android · iOS'],
           ].map(([label, value]) => (
-            <View key={label} style={[styles.detailRow, { borderBottomColor: colors.border }]}>
+            <View key={label} style={[styles.detailRow, compact && styles.compactDetailRow, { borderBottomColor: colors.border }]}>
               <Text style={[styles.detailLabel, { color: colors.textMuted }]}>{label}</Text>
               <Text
                 numberOfLines={2}
@@ -169,7 +171,7 @@ export function SettingsScreen() {
 
         <Card
           description="Sesión del ambiente aislado de desarrollo"
-          style={styles.card}
+          style={{ ...styles.card, ...(compact ? styles.compactCard : {}) }}
           title="Cuenta">
           <View style={styles.account}>
             <View>
@@ -183,10 +185,73 @@ export function SettingsScreen() {
             <Button loading={loading} onPress={logout} variant="secondary">
               Cerrar sesión
             </Button>
+            <View style={[styles.technicalAccess, { borderTopColor: colors.border }]}>
+              <View style={styles.optionCopy}>
+                <Text style={[styles.optionTitle, { color: colors.text }]}>Soporte técnico</Text>
+                <Text style={[styles.optionDescription, { color: colors.textMuted }]}>
+                  Configuración protegida de la conexión API.
+                </Text>
+              </View>
+              <Button onPress={() => setTechnicalVisible(true)} variant="secondary">
+                Entrar como técnico
+              </Button>
+            </View>
           </View>
         </Card>
+        <TechnicalSettingsModal
+          onClose={() => setTechnicalVisible(false)}
+          onSaved={(url) => {
+            setConfiguredApiUrl(url);
+            void queryClient.invalidateQueries();
+          }}
+          visible={technicalVisible}
+        />
       </View>
+  );
+}
+
+export function SettingsScreen() {
+  return (
+    <ScreenFrame
+      actions={<Badge label={appEnvironment.name} tone="info" />}
+      description="Preferencias visuales, entorno y diagnóstico de la aplicación."
+      title="Configuración">
+      <SettingsContent />
     </ScreenFrame>
+  );
+}
+
+export function SettingsModal({ visible, onClose }: { visible: boolean; onClose: () => void }) {
+  const { colors } = useAppTheme();
+  const { width } = useWindowDimensions();
+  const desktop = width >= breakpoints.desktop;
+
+  return (
+    <Modal animationType="fade" onRequestClose={onClose} transparent visible={visible}>
+      <Pressable onPress={onClose} style={[styles.modalBackdrop, { backgroundColor: colors.overlay }]}>
+        <Pressable
+          onPress={(event) => event.stopPropagation()}
+          style={[styles.modalPanel, desktop && styles.modalPanelDesktop, { backgroundColor: colors.surfaceElevated }]}>
+          <View style={[styles.modalHeader, { borderBottomColor: colors.border }]}>
+            <View style={styles.modalHeading}>
+              <Text style={[styles.modalTitle, { color: colors.text }]}>Configuración</Text>
+              <Text style={[styles.modalDescription, { color: colors.textMuted }]}>Preferencias, conexión y cuenta</Text>
+            </View>
+            <Badge label={appEnvironment.name} tone="info" />
+            <Pressable
+              accessibilityLabel="Cerrar configuración"
+              accessibilityRole="button"
+              onPress={onClose}
+              style={[styles.modalClose, { backgroundColor: colors.surfaceMuted }]}>
+              <Text style={[styles.modalCloseText, { color: colors.text }]}>×</Text>
+            </Pressable>
+          </View>
+          <ScrollView contentContainerStyle={styles.modalBody} showsVerticalScrollIndicator>
+            <SettingsContent compact />
+          </ScrollView>
+        </Pressable>
+      </Pressable>
+    </Modal>
   );
 }
 
@@ -196,12 +261,21 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     gap: spacing.md,
   },
+  compactGrid: {
+    gap: spacing.sm,
+  },
   card: {
     flexGrow: 1,
     flexShrink: 1,
     flexBasis: 420,
     minWidth: 280,
     maxWidth: '100%',
+  },
+  compactCard: {
+    flexBasis: 280,
+    minWidth: 250,
+    padding: 14,
+    gap: spacing.sm,
   },
   optionList: {
     gap: spacing.sm,
@@ -226,6 +300,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.md,
+  },
+  compactOption: {
+    minHeight: 50,
+    paddingHorizontal: 12,
+    paddingVertical: 9,
   },
   optionCopy: {
     flex: 1,
@@ -261,6 +340,10 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
     paddingVertical: spacing.sm,
   },
+  compactDetailRow: {
+    minHeight: 38,
+    paddingVertical: 6,
+  },
   detailLabel: {
     width: 118,
     fontSize: 12,
@@ -276,6 +359,15 @@ const styles = StyleSheet.create({
   account: {
     gap: spacing.md,
   },
+  technicalAccess: {
+    borderTopWidth: 1,
+    paddingTop: spacing.md,
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacing.sm,
+  },
   diagnosticAction: {
     marginTop: spacing.md,
     flexDirection: 'row',
@@ -287,5 +379,54 @@ const styles = StyleSheet.create({
   diagnosticMessage: {
     flex: 1,
     minWidth: 200,
+  },
+  modalBackdrop: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: spacing.md,
+  },
+  modalPanel: {
+    width: '100%',
+    maxWidth: 720,
+    maxHeight: '92%',
+    borderRadius: radii.xl,
+    overflow: 'hidden',
+  },
+  modalPanelDesktop: {
+    maxWidth: 1080,
+  },
+  modalHeader: {
+    minHeight: 66,
+    borderBottomWidth: 1,
+    paddingHorizontal: spacing.lg,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+  },
+  modalHeading: {
+    flex: 1,
+    gap: 2,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: '800',
+  },
+  modalDescription: {
+    fontSize: 12,
+  },
+  modalClose: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  modalCloseText: {
+    fontSize: 24,
+    lineHeight: 26,
+  },
+  modalBody: {
+    padding: spacing.md,
   },
 });

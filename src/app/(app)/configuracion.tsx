@@ -1,3 +1,5 @@
-import { SettingsScreen } from '@/features/settings/settings-screen';
+import { Redirect } from 'expo-router';
 
-export default SettingsScreen;
+export default function SettingsRedirect() {
+  return <Redirect href="/" />;
+}

@@ -4,6 +4,7 @@ import { Modal, Platform, Pressable, ScrollView, StyleSheet, Text, useWindowDime
 
 import { ScreenFrame } from '@/components/layout/screen-frame';
 import { Badge } from '@/components/ui/badge';
+import { AmountField } from '@/components/ui/amount-field';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { DatePickerField } from '@/components/ui/date-picker-field';
@@ -75,14 +76,6 @@ export function DataQualityScreen() {
 
   return (
     <ScreenFrame description="Diagnóstico operativo de la información." hideHeader title="Calidad de datos">
-      <View style={[styles.heading, filtersSidebar && styles.headingWithSidebar]}>
-        <View style={styles.headingCopy}>
-          <Text style={[styles.title, { color: colors.text }]}>Calidad de datos</Text>
-          <Text style={[styles.muted, { color: colors.textMuted }]}>Control de duplicados, referencias, ventas asociadas e importes.</Text>
-        </View>
-        <Badge label="Análisis seguro · sin reparaciones" tone="info" />
-      </View>
-
       {!desktop ? (
         <View style={[styles.mobileFilters, { borderColor: colors.accent, backgroundColor: colors.surface }]}>
           <Text style={[styles.filterSummary, { color: colors.text }]}>{formatDate(filters.from)} — {formatDate(filters.to)}</Text>
@@ -104,8 +97,8 @@ export function DataQualityScreen() {
           <View style={styles.filters}>
             <View style={styles.filter}><DatePickerField label="Desde" value={filters.from} onChange={(value) => setFilter('from', value)} /></View>
             <View style={styles.filter}><DatePickerField label="Hasta" value={filters.to} onChange={(value) => setFilter('to', value)} /></View>
-            <View style={styles.filter}><TextField keyboardType="decimal-pad" label="Importe mínimo" value={filters.min_amount || ''} placeholder="Ej.: 10.000" onChangeText={(value) => setFilter('min_amount', value)} /></View>
-            <View style={styles.filter}><TextField keyboardType="decimal-pad" label="Importe máximo" value={filters.max_amount || ''} placeholder="Ej.: 124.500,50" onChangeText={(value) => setFilter('max_amount', value)} /></View>
+            <View style={styles.filter}><AmountField label="Importe mínimo" value={filters.min_amount || ''} placeholder="Ej.: 10.000" onChangeText={(value) => setFilter('min_amount', value)} /></View>
+            <View style={styles.filter}><AmountField label="Importe máximo" value={filters.max_amount || ''} placeholder="Ej.: 124.500,50" onChangeText={(value) => setFilter('max_amount', value)} /></View>
             <View style={styles.filter}><SelectField label="Proveedor" value={filters.provider || ''} options={providerOptions} onChange={(value) => setFilter('provider', value)} /></View>
           </View>
           {rangeError ? <Text style={{ color: colors.danger }}>La fecha Desde no puede ser posterior a Hasta.</Text> : null}
@@ -113,28 +106,26 @@ export function DataQualityScreen() {
       ) : null}
 
       <View style={[styles.mainContent, filtersSidebar && styles.mainContentDesktop]}>
-      {summary ? (
-        <Card style={{ ...styles.metricsCard, borderColor: colors.accent }}>
-          <View style={styles.metrics}>
-            {[
-              ['Revisados', summary.checked_count],
-              ['Válidos', summary.valid_count],
-              ['Advertencias', summary.warning_count],
-              ['Errores', summary.error_count],
-            ].map(([label, value]) => (
-              <View key={String(label)} style={[styles.metric, !desktop && styles.metricMobile, { borderColor: colors.border }]}>
-                <Text style={[styles.metricLabel, { color: colors.textMuted }]}>{label}</Text>
-                <Text style={[styles.metricValue, { color: colors.text }]}>{value}</Text>
-              </View>
-            ))}
-          </View>
-        </Card>
-      ) : null}
-
       {qualityQuery.isPending ? <FeedbackState title="Analizando calidad de datos" description="Revisando los datos sintéticos del período." /> : null}
       {qualityQuery.isError ? <FeedbackState title="No se pudo completar el análisis" description="Verificá la sesión y el backend aislado." actionLabel="Reintentar" onAction={() => qualityQuery.refetch()} /> : null}
       {qualityQuery.data ? (
-        <Card accessory={<Badge label={`${rows.length} hallazgos`} tone={rows.length ? 'warning' : 'success'} />} title="Hallazgos" style={{ ...styles.section, borderColor: colors.accent }}>
+        <Card title="Calidad de datos" style={{ ...styles.section, borderColor: colors.accent }}>
+          <Text style={[styles.muted, { color: colors.textMuted }]}>Control de duplicados, referencias, ventas asociadas e importes.</Text>
+          {summary ? (
+            <View style={[styles.metrics, styles.metricsEmbedded, { borderColor: colors.border }]}>
+              {[
+                ['Revisados', summary.checked_count],
+                ['Válidos', summary.valid_count],
+                ['Advertencias', summary.warning_count],
+                ['Errores', summary.error_count],
+              ].map(([label, value]) => (
+                <View key={String(label)} style={[styles.metric, !desktop && styles.metricMobile, { borderColor: colors.border }]}>
+                  <Text style={[styles.metricLabel, { color: colors.textMuted }]}>{label}</Text>
+                  <Text style={[styles.metricValue, { color: colors.text }]}>{value}</Text>
+                </View>
+              ))}
+            </View>
+          ) : null}
           <TextField
             label="Buscar referencia"
             onChangeText={(value) => setFilter('external_reference', value)}
@@ -331,7 +322,6 @@ function QualityRow({ row, color, textColor, onPress }: { row: QualityFinding; c
 }
 
 const styles = StyleSheet.create({
-  headingWithSidebar: { marginLeft: 304 },
   workspace: { gap: spacing.lg },
   workspaceDesktop: { paddingLeft: 304, alignItems: 'flex-start' },
   mainContent: { gap: spacing.lg },
@@ -341,24 +331,21 @@ const styles = StyleSheet.create({
     flexShrink: 0,
     alignSelf: 'flex-start',
     position: 'fixed' as 'relative',
-    top: 86,
+    top: 33,
     zIndex: 2,
     padding: 12,
     gap: 7,
     borderTopWidth: 1,
     borderRadius: radii.md,
   },
-  heading: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: spacing.md },
-  headingCopy: { flex: 1, minWidth: 220, gap: 3 },
-  title: { fontSize: 20, fontWeight: '700' },
   muted: { fontSize: 12, lineHeight: 18 },
   section: { borderTopWidth: 4 },
   mobileFilters: { borderWidth: 1, borderTopWidth: 4, borderRadius: radii.lg, padding: spacing.md, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.sm },
   filterSummary: { flex: 1, fontSize: 12, fontWeight: '600' },
   filters: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
   filter: { flexGrow: 1, flexBasis: 220, minWidth: 190 },
-  metricsCard: { padding: 0, overflow: 'hidden', borderTopWidth: 4 },
   metrics: { flexDirection: 'row', flexWrap: 'wrap' },
+  metricsEmbedded: { overflow: 'hidden', borderWidth: 1, borderRadius: radii.md },
   metric: { flexGrow: 1, flexBasis: 170, minHeight: 72, padding: spacing.md, justifyContent: 'center', gap: 4, borderRightWidth: 1 },
   metricMobile: { flexGrow: 0, flexBasis: '50%', minHeight: 84 },
   metricLabel: { fontSize: 11, fontWeight: '600' },

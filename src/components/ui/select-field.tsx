@@ -71,7 +71,7 @@ export function SelectField({
                         borderColor: active ? colors.primary : colors.border,
                       },
                     ]}>
-                    <Text style={[styles.optionText, { color: active ? colors.primary : colors.text }]}>
+                    <Text style={[styles.optionText, { color: colors.text }]}>
                       {option.label}
                     </Text>
                     {active ? <Ionicons color={colors.primary} name="checkmark" size={18} /> : null}

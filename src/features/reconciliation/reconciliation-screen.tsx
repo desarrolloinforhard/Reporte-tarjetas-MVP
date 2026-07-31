@@ -5,14 +5,17 @@ import { Modal, Platform, Pressable, ScrollView, StyleSheet, Text, useWindowDime
 
 import { ScreenFrame } from '@/components/layout/screen-frame';
 import { Badge } from '@/components/ui/badge';
+import { AmountField } from '@/components/ui/amount-field';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { DatePickerField } from '@/components/ui/date-picker-field';
+import { ExportDialog, ExportFormat } from '@/components/ui/export-dialog';
 import { FeedbackState } from '@/components/ui/feedback-state';
 import { SelectField } from '@/components/ui/select-field';
 import { TextField } from '@/components/ui/text-field';
 import { PaymentDetailModal } from '@/features/payments/payment-detail-modal';
 import {
+  getAllReconciliationRows,
   getReconciliationDetail,
   getReconciliationRows,
   getReconciliationSummary,
@@ -23,6 +26,7 @@ import {
 import { breakpoints, radii, spacing } from '@/theme/tokens';
 import { useAppTheme } from '@/theme/theme-provider';
 import { formatDate, formatDateTime } from '@/utils/date-format';
+import { exportCsv, exportPdf } from '@/utils/file-export';
 
 const PAGE_SIZE = 20;
 const providers = { clover: 'Clover', mercadopago: 'Mercado Pago' };
@@ -78,6 +82,7 @@ export function ReconciliationScreen() {
   const params = useLocalSearchParams<{ from?: string; to?: string; status?: string }>();
   const [filtersVisible, setFiltersVisible] = useState(false);
   const [differencesVisible, setDifferencesVisible] = useState(false);
+  const [exportVisible, setExportVisible] = useState(false);
   const [selected, setSelected] = useState<ReconciliationRow | null>(null);
   const [filters, setFilters] = useState<ReconciliationFilters>({
     from: params.from || isoDaysAgo(30),
@@ -115,6 +120,24 @@ export function ReconciliationScreen() {
     if (status === 'sale_not_found') return isDark ? colors.dangerSoft : '#F4BBB6';
     return isDark ? colors.warningSoft : '#F5D184';
   };
+
+  async function handleExport(format: ExportFormat) {
+    const rows = await getAllReconciliationRows(filters);
+    if (!rows.length) throw new Error('No hay filas para exportar.');
+    const columns = [
+      { label: 'Fecha', value: (row: ReconciliationRow) => formatDateTime(row.created_at) },
+      { label: 'Proveedor', value: (row: ReconciliationRow) => providers[row.provider as keyof typeof providers] || row.provider },
+      { label: 'Referencia', value: (row: ReconciliationRow) => row.external_reference },
+      { label: 'Pago', value: (row: ReconciliationRow) => money(row.payment_amount) },
+      { label: 'Venta', value: (row: ReconciliationRow) => money(row.sale_amount) },
+      { label: 'Diferencia', value: (row: ReconciliationRow) => money(row.difference) },
+      { label: 'Estado', value: (row: ReconciliationRow) => row.status_label || statusLabels[row.status] },
+      { label: 'Detalle', value: (row: ReconciliationRow) => row.issue_message },
+    ];
+    const name = `conciliacion_${filters.from}_${filters.to}`;
+    if (format === 'pdf') await exportPdf(name, 'Conciliación de pagos', columns, rows);
+    else await exportCsv(name, columns, rows);
+  }
 
   const metrics = summaryQuery.data
     ? [
@@ -158,8 +181,8 @@ export function ReconciliationScreen() {
           <View style={styles.filterGrid}>
             <View style={styles.filterItem}><DatePickerField label="Desde" value={filters.from} onChange={(value) => setFilter('from', value)} /></View>
             <View style={styles.filterItem}><DatePickerField label="Hasta" value={filters.to} onChange={(value) => setFilter('to', value)} /></View>
-            <View style={styles.filterItem}><TextField keyboardType="decimal-pad" label="Importe mínimo" value={filters.min_amount || ''} placeholder="Ej.: 10.000" onChangeText={(value) => setFilter('min_amount', value)} /></View>
-            <View style={styles.filterItem}><TextField keyboardType="decimal-pad" label="Importe máximo" value={filters.max_amount || ''} placeholder="Ej.: 124.500,50" onChangeText={(value) => setFilter('max_amount', value)} /></View>
+            <View style={styles.filterItem}><AmountField label="Importe mínimo" value={filters.min_amount || ''} placeholder="Ej.: 10.000" onChangeText={(value) => setFilter('min_amount', value)} /></View>
+            <View style={styles.filterItem}><AmountField label="Importe máximo" value={filters.max_amount || ''} placeholder="Ej.: 124.500,50" onChangeText={(value) => setFilter('max_amount', value)} /></View>
             <View style={styles.filterItem}><SelectField label="Proveedor" value={filters.provider ?? ''} options={providerOptions} onChange={(value) => setFilter('provider', value)} /></View>
             <View style={styles.filterItem}><SelectField label="Estado" value={filters.reconciliation_status ?? ''} options={statusOptions} onChange={(value) => setFilter('reconciliation_status', value)} /></View>
           </View>
@@ -173,7 +196,7 @@ export function ReconciliationScreen() {
       {listQuery.isPending ? <FeedbackState title="Cargando conciliación" description="Comparando fixtures de pagos y ventas." /> : null}
       {listQuery.isError ? <FeedbackState title="No se pudo cargar la conciliación" description="Verificá que el backend aislado esté activo." actionLabel="Reintentar" onAction={() => listQuery.refetch()} /> : null}
       {listQuery.data ? (
-        <Card accessory={<Badge label={`${listQuery.data.total} resultados`} tone="info" />} style={{ ...styles.sectionCard, borderColor: colors.accent }} title="Resultados">
+        <Card style={{ ...styles.sectionCard, borderColor: colors.accent }} title="Resultados">
           <View
             style={[
               styles.metrics,
@@ -239,14 +262,19 @@ export function ReconciliationScreen() {
             ) : null}
           </View>
           <View style={styles.resultsSearch}>
-            <TextField
-              label="Buscar referencia"
-              onChangeText={(value) => setFilter('external_reference', value)}
-              placeholder="Número de referencia"
-              value={filters.external_reference}
-            />
+            <View style={styles.searchField}>
+              <TextField
+                label="Buscar referencia"
+                onChangeText={(value) => setFilter('external_reference', value)}
+                placeholder="Número de referencia"
+                value={filters.external_reference}
+              />
+            </View>
+            <Button disabled={!listQuery.data.total} onPress={() => setExportVisible(true)} variant="secondary">
+              Exportar
+            </Button>
           </View>
-          {listQuery.data.items.length ? (desktop ? (
+          {desktop ? (
             <ScrollView
               contentContainerStyle={styles.tableScrollContent}
               horizontal
@@ -268,9 +296,15 @@ export function ReconciliationScreen() {
                     <Text style={[styles.cell, styles.statusText, { color: colors.text }]}>{item.status_label || statusLabels[item.status]}</Text>
                   </Pressable>
                 ))}
+                {!listQuery.data.items.length ? (
+                  <View style={[styles.emptyTableRow, { borderColor: colors.border }]}>
+                    <Text style={[styles.emptyTableTitle, { color: colors.text }]}>Sin resultados</Text>
+                    <Text style={[styles.muted, { color: colors.textMuted }]}>No hay registros para los filtros seleccionados.</Text>
+                  </View>
+                ) : null}
               </View>
             </ScrollView>
-          ) : (
+          ) : listQuery.data.items.length ? (
             <View style={styles.cards}>
               {listQuery.data.items.map((item) => (
                 <Pressable key={`${item.provider}-${item.payment_id}`} onPress={() => setSelected(item)}>
@@ -288,7 +322,7 @@ export function ReconciliationScreen() {
                 </Pressable>
               ))}
             </View>
-          )) : (
+          ) : (
             <FeedbackState
               title="Sin resultados"
               description="No hay registros para los filtros seleccionados."
@@ -296,7 +330,11 @@ export function ReconciliationScreen() {
           )}
           <View style={styles.pagination}>
             <Button disabled={filters.offset === 0} variant="secondary" onPress={() => setFilter('offset', Math.max(0, filters.offset - PAGE_SIZE))}>Anterior</Button>
-            <Text style={[styles.muted, { color: colors.textMuted }]}>{filters.offset + 1}–{Math.min(filters.offset + PAGE_SIZE, listQuery.data.total)} de {listQuery.data.total}</Text>
+            <Text style={[styles.muted, { color: colors.textMuted }]}>
+              {listQuery.data.total
+                ? `${filters.offset + 1}–${Math.min(filters.offset + PAGE_SIZE, listQuery.data.total)} de ${listQuery.data.total}`
+                : '0–0 de 0'}
+            </Text>
             <Button disabled={!listQuery.data.hasMore} variant="secondary" onPress={() => setFilter('offset', filters.offset + PAGE_SIZE)}>Siguiente</Button>
           </View>
         </Card>
@@ -304,6 +342,13 @@ export function ReconciliationScreen() {
 
       </View>
       </View>
+
+      <ExportDialog
+        formats={['csv', 'pdf']}
+        onClose={() => setExportVisible(false)}
+        onExport={handleExport}
+        visible={exportVisible}
+      />
 
       <Modal
         animationType="fade"
@@ -425,13 +470,13 @@ const styles = StyleSheet.create({
   workspace: { gap: spacing.lg },
   workspaceDesktop: { paddingLeft: 304, alignItems: 'flex-start' },
   mainContent: { gap: spacing.lg },
-  mainContentDesktop: { flex: 1, minWidth: 0 },
+  mainContentDesktop: { flex: 1, minWidth: 0, width: '100%', maxWidth: '100%' },
   sidebarFilters: {
     width: 280,
     flexShrink: 0,
     alignSelf: 'flex-start',
     position: 'fixed' as 'relative',
-    top: 14,
+    top: 33,
     zIndex: 2,
     padding: 12,
     gap: 7,
@@ -442,7 +487,8 @@ const styles = StyleSheet.create({
   mobileFilterBar: { borderWidth: 1, borderTopWidth: 4, borderRadius: radii.lg, padding: spacing.md, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.sm },
   filterSummary: { flex: 1, fontSize: 12, fontWeight: '600' },
   sectionCard: { borderTopWidth: 4 },
-  resultsSearch: { width: '100%' },
+  resultsSearch: { width: '100%', flexDirection: 'row', flexWrap: 'wrap', alignItems: 'flex-end', gap: spacing.sm },
+  searchField: { flex: 1, minWidth: 220 },
   filterGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
   filterItem: { flexGrow: 1, flexShrink: 1, flexBasis: 210, minWidth: 180 },
   hint: { marginTop: spacing.sm, fontSize: 11 },
@@ -464,6 +510,8 @@ const styles = StyleSheet.create({
   table: { minWidth: 945, width: '100%' },
   tableRow: { minHeight: 38, flexDirection: 'row', alignItems: 'center', borderBottomWidth: 1 },
   tableHeader: { borderRadius: radii.sm, borderBottomWidth: 0 },
+  emptyTableRow: { minHeight: 132, borderBottomWidth: 1, alignItems: 'center', justifyContent: 'center', gap: 4 },
+  emptyTableTitle: { fontSize: 16, fontWeight: '700' },
   cell: { flexGrow: 1, flexBasis: 135, minWidth: 135, paddingHorizontal: 8, fontSize: 12 },
   headerText: { fontSize: 10, fontWeight: '700' },
   numberCell: { textAlign: 'right', fontVariant: ['tabular-nums'] },

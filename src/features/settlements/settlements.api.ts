@@ -86,6 +86,18 @@ export async function getSettlements(filters: SettlementFilters) {
   };
 }
 
+export async function getAllSettlements(filters: SettlementFilters) {
+  const rows: Settlement[] = [];
+  let offset = 0;
+  const limit = 100;
+  while (true) {
+    const page = await getSettlements({ ...filters, limit, offset });
+    rows.push(...page.items);
+    if (!page.hasMore || rows.length >= page.total) return rows;
+    offset += limit;
+  }
+}
+
 export function getSettlementsSummary(filters: SettlementFilters) {
   return apiRequest(
     `/settlements/summary?${query(filters, false)}`,

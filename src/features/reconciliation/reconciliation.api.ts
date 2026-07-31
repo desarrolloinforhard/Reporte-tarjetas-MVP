@@ -84,6 +84,18 @@ export async function getReconciliationRows(filters: ReconciliationFilters) {
   };
 }
 
+export async function getAllReconciliationRows(filters: ReconciliationFilters) {
+  const rows: ReconciliationRow[] = [];
+  let offset = 0;
+  const limit = 100;
+  while (true) {
+    const page = await getReconciliationRows({ ...filters, limit, offset });
+    rows.push(...page.items);
+    if (!page.hasMore || rows.length >= page.total) return rows;
+    offset += limit;
+  }
+}
+
 export function getReconciliationSummary(filters: ReconciliationFilters) {
   return apiRequest(
     `/reconciliation/summary?${query(filters, false)}`,

@@ -5,7 +5,11 @@
     "owner": "nicolasets-team",
     "description": "Reportes de tarjetas para clientes de Inforhard S.R.L",
     "version": "0.1.0",
-    "platforms": ["ios", "android", "web"],
+    "platforms": [
+      "ios",
+      "android",
+      "web"
+    ],
     "icon": "./assets/branding/logo.png",
     "scheme": "reportestarjetas",
     "userInterfaceStyle": "automatic",
@@ -37,7 +41,8 @@
           "image": "./assets/branding/logo_splash.png",
           "imageWidth": 120
         }
-      ]
+      ],
+      "expo-sharing"
     ],
     "experiments": {
       "typedRoutes": true,

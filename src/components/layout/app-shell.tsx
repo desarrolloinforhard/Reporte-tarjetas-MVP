@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { SettingsModal } from '@/features/settings/settings-screen';
 import { AppRoute, appRoutes, isRouteActive } from '@/navigation/routes';
 import { breakpoints, radii, spacing } from '@/theme/tokens';
 import { useAppTheme } from '@/theme/theme-provider';
@@ -20,15 +21,17 @@ import { useAppTheme } from '@/theme/theme-provider';
 function NavItem({
   route,
   horizontal = false,
+  activeOverride,
   onPress,
 }: {
   route: AppRoute;
   horizontal?: boolean;
+  activeOverride?: boolean;
   onPress: () => void;
 }) {
   const pathname = usePathname();
   const { colors } = useAppTheme();
-  const active = isRouteActive(pathname, route.href);
+  const active = activeOverride ?? isRouteActive(pathname, route.href);
 
   return (
     <Pressable
@@ -113,16 +116,21 @@ export function AppShell({ children }: PropsWithChildren) {
   const pathname = usePathname();
   const { colors } = useAppTheme();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const isMobile = width < breakpoints.tablet;
   const activeRoute = useMemo(
     () => appRoutes.find((route) => isRouteActive(pathname, route.href)) ?? appRoutes[0],
     [pathname],
   );
   const mobileRoutes = appRoutes.slice(0, 4);
-  const moreActive = appRoutes.slice(4).some((route) => isRouteActive(pathname, route.href));
+  const moreActive = settingsOpen || appRoutes.slice(4).some((route) => isRouteActive(pathname, route.href));
 
   function navigate(route: AppRoute) {
     setMenuOpen(false);
+    if (route.href === '/configuracion') {
+      setSettingsOpen(true);
+      return;
+    }
     router.push(route.href as Href);
   }
 
@@ -142,6 +150,7 @@ export function AppShell({ children }: PropsWithChildren) {
               showsHorizontalScrollIndicator={false}>
               {appRoutes.map((route) => (
                 <NavItem
+                  activeOverride={route.href === '/configuracion' ? settingsOpen : undefined}
                   horizontal
                   key={route.href}
                   onPress={() => navigate(route)}
@@ -258,11 +267,17 @@ export function AppShell({ children }: PropsWithChildren) {
               </Pressable>
             </View>
             {appRoutes.slice(4).map((route) => (
-              <NavItem key={route.href} onPress={() => navigate(route)} route={route} />
+              <NavItem
+                activeOverride={route.href === '/configuracion' ? settingsOpen : undefined}
+                key={route.href}
+                onPress={() => navigate(route)}
+                route={route}
+              />
             ))}
           </Pressable>
         </Pressable>
       </Modal>
+      <SettingsModal onClose={() => setSettingsOpen(false)} visible={settingsOpen} />
     </SafeAreaView>
   );
 }
