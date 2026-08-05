@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useLocalSearchParams } from 'expo-router';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   Modal,
   Platform,
@@ -374,7 +374,7 @@ function PaymentRow({
             backgroundColor: rowBackground(payment.status, colors, isDark),
           }}>
           <View style={styles.rowBetween}>
-            <View>
+            <View style={styles.paymentPrimaryInfo}>
               <Text style={[styles.paymentAmount, { color: colors.text }]}>
                 {money(payment.amount)}
               </Text>
@@ -382,7 +382,9 @@ function PaymentRow({
                 {providers[payment.provider] || payment.provider} · {paymentMethod(payment)}
               </Text>
             </View>
-            <Badge label={payment.status_label} tone={tone(payment.status)} />
+            <View style={styles.paymentStatusBadge}>
+              <Badge label={payment.status_label} tone={tone(payment.status)} />
+            </View>
           </View>
           <View style={styles.rowBetween}>
             <Text style={[styles.muted, { color: colors.textMuted }]}>
@@ -468,14 +470,47 @@ export function PaymentsScreen() {
   const [mobileFiltersVisible, setMobileFiltersVisible] = useState(false);
   const [exportVisible, setExportVisible] = useState(false);
   const [selected, setSelected] = useState<Payment | null>(null);
+  const [referenceDraft, setReferenceDraft] = useState('');
+  const [minAmountDraft, setMinAmountDraft] = useState('');
+  const [maxAmountDraft, setMaxAmountDraft] = useState('');
+  useEffect(() => {
+    const timeout = setTimeout(() => {
+      setFilters((current) => {
+        if ((current.external_reference || '') === referenceDraft) return current;
+        return { ...current, external_reference: referenceDraft, offset: 0 };
+      });
+    }, 650);
+    return () => clearTimeout(timeout);
+  }, [referenceDraft]);
+  useEffect(() => {
+    const timeout = setTimeout(() => {
+      setFilters((current) => {
+        if (
+          (current.min_amount || '') === minAmountDraft &&
+          (current.max_amount || '') === maxAmountDraft
+        ) {
+          return current;
+        }
+        return {
+          ...current,
+          min_amount: minAmountDraft,
+          max_amount: maxAmountDraft,
+          offset: 0,
+        };
+      });
+    }, 650);
+    return () => clearTimeout(timeout);
+  }, [maxAmountDraft, minAmountDraft]);
   const filterKey = useMemo(() => JSON.stringify(filters), [filters]);
   const paymentsQuery = useQuery({
     queryKey: ['payments', filterKey],
     queryFn: () => getPayments(filters),
+    placeholderData: (previousData) => previousData,
   });
   const summaryQuery = useQuery({
     queryKey: ['payments-summary', filterKey],
     queryFn: () => getPaymentsSummary(filters),
+    placeholderData: (previousData) => previousData,
   });
   const catalogsQuery = useQuery({ queryKey: ['payment-catalogs'], queryFn: getPaymentCatalogs });
   const detailQuery = useQuery({
@@ -609,19 +644,19 @@ export function PaymentsScreen() {
           <View style={styles.filterItem}>
             <AmountField
               label="Importe mínimo"
-              onChangeText={(value) => setFilter('min_amount', value)}
+              onChangeText={setMinAmountDraft}
               placeholder="Ej.: 10.000"
               style={filtersSidebar ? styles.sidebarTextInput : undefined}
-              value={filters.min_amount || ''}
+              value={minAmountDraft}
             />
           </View>
           <View style={styles.filterItem}>
             <AmountField
               label="Importe máximo"
-              onChangeText={(value) => setFilter('max_amount', value)}
+              onChangeText={setMaxAmountDraft}
               placeholder="Ej.: 124.500,50"
               style={filtersSidebar ? styles.sidebarTextInput : undefined}
-              value={filters.max_amount || ''}
+              value={maxAmountDraft}
             />
           </View>
           <View style={styles.filterItem}>
@@ -752,7 +787,7 @@ export function PaymentsScreen() {
       {paymentsQuery.isError ? (
         <FeedbackState
           actionLabel="Reintentar"
-          description="Verificá que el backend de desarrollo continúe activo en el puerto 5001."
+          description="La API respondió, pero no se pudieron interpretar los datos. Reintentá o verificá la conexión configurada."
           onAction={() => paymentsQuery.refetch()}
           title="No se pudieron cargar los pagos"
         />
@@ -806,10 +841,10 @@ export function PaymentsScreen() {
           <View style={styles.operationsSearch}>
             <View style={styles.operationsSearchField}><TextField
                 label="Buscar referencia"
-                onChangeText={(value) => setFilter('external_reference', value)}
+                onChangeText={setReferenceDraft}
                 placeholder="Número de referencia"
                 style={styles.compactInput}
-                value={filters.external_reference}
+                value={referenceDraft}
               /></View>
             <Button disabled={!paymentsQuery.data.total} onPress={() => setExportVisible(true)} variant="secondary">Exportar</Button>
           </View>
@@ -849,9 +884,12 @@ export function PaymentsScreen() {
                       <Text style={[styles.muted, { color: colors.textMuted }]}>
                         No hay pagos que coincidan con la referencia o los filtros seleccionados.
                       </Text>
-                      {filters.external_reference ? (
+                      {referenceDraft ? (
                         <Button
-                          onPress={() => setFilter('external_reference', '')}
+                          onPress={() => {
+                            setReferenceDraft('');
+                            setFilter('external_reference', '');
+                          }}
                           variant="secondary">
                           Limpiar búsqueda
                         </Button>
@@ -881,9 +919,12 @@ export function PaymentsScreen() {
                   <Text style={[styles.muted, { color: colors.textMuted }]}>
                     No hay pagos que coincidan con la referencia o los filtros seleccionados.
                   </Text>
-                  {filters.external_reference ? (
+                  {referenceDraft ? (
                     <Button
-                      onPress={() => setFilter('external_reference', '')}
+                      onPress={() => {
+                        setReferenceDraft('');
+                        setFilter('external_reference', '');
+                      }}
                       variant="secondary">
                       Limpiar búsqueda
                     </Button>
@@ -1131,6 +1172,8 @@ const styles = StyleSheet.create({
   operationsSearchField: { flex: 1, minWidth: 220 },
   tableRows: { gap: 1 },
   paymentCard: { padding: spacing.md },
+  paymentPrimaryInfo: { flex: 1, minWidth: 0 },
+  paymentStatusBadge: { flexShrink: 1, maxWidth: '48%', alignItems: 'flex-end' },
   paymentAmount: { fontSize: 18, fontWeight: '900' },
   muted: { fontSize: 12, lineHeight: 18 },
   rowBetween: {

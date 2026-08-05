@@ -11,6 +11,7 @@ import {
 type RequestOptions = Omit<RequestInit, 'body'> & {
   body?: unknown;
   token?: string;
+  timeoutMs?: number;
 };
 
 export type ApiResult<T> = {
@@ -23,6 +24,7 @@ export async function apiRequestWithMeta<T extends z.ZodType>(
   dataSchema: T,
   options: RequestOptions = {},
 ): Promise<ApiResult<z.infer<T>>> {
+  const { timeoutMs, signal: externalSignal, ...requestOptions } = options;
   const headers = new Headers(options.headers);
   headers.set('Accept', 'application/json');
 
@@ -35,15 +37,26 @@ export async function apiRequestWithMeta<T extends z.ZodType>(
   }
 
   let response: Response;
+  const controller = timeoutMs ? new AbortController() : null;
+  const timeout = controller ? setTimeout(() => controller.abort(), timeoutMs) : null;
+  const abortFromExternalSignal = () => controller?.abort();
+  if (controller) externalSignal?.addEventListener('abort', abortFromExternalSignal, { once: true });
   try {
     response = await fetch(`${getApiBaseUrl()}${path}`, {
       credentials: 'include',
-      ...options,
+      ...requestOptions,
       headers,
       body: options.body === undefined ? undefined : JSON.stringify(options.body),
+      signal: controller?.signal ?? externalSignal,
     });
   } catch {
+    if (controller?.signal.aborted && !externalSignal?.aborted) {
+      throw new ApiError('REQUEST_TIMEOUT', 'La API demoró demasiado en responder.');
+    }
     throw new ApiError('CONNECTION_ERROR', 'No se pudo conectar con la API.');
+  } finally {
+    if (timeout) clearTimeout(timeout);
+    if (controller) externalSignal?.removeEventListener('abort', abortFromExternalSignal);
   }
 
   let json: unknown;

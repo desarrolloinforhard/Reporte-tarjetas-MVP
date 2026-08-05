@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 import { apiRequest, apiRequestWithMeta } from '@/api/client';
-import { paymentDetailSchema } from '@/features/payments/payments.api';
+import { getPaymentDetail } from '@/features/payments/payments.api';
 import { setNormalizedAmountParam } from '@/utils/amount-filter';
 
 export const reconciliationStatusSchema = z.enum([
@@ -104,8 +104,8 @@ export function getReconciliationSummary(filters: ReconciliationFilters) {
 }
 
 export function getReconciliationDetail(provider: string, paymentId: string) {
-  return apiRequest(
-    `/reconciliation/payment/${encodeURIComponent(provider)}/${encodeURIComponent(paymentId)}`,
-    paymentDetailSchema,
-  );
+  // El endpoint de conciliación profunda puede ejecutar consultas costosas de
+  // venta/productos. El modal usa el mismo contrato operativo que Pagos, que
+  // ya completa la venta asociada y evita dejar la interfaz cargando sin fin.
+  return getPaymentDetail(provider, paymentId);
 }

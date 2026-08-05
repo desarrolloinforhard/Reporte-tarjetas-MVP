@@ -44,6 +44,19 @@ describe('contratos de pagos', () => {
     expect(paymentSchema.parse({ ...payment, card_last_four: null }).card_last_four).toBeNull();
   });
 
+  it('normaliza filas legacy de la API real', () => {
+    const parsed = paymentSchema.parse({
+      ...payment,
+      created_date: undefined,
+      card_type: undefined,
+      card_last_four: undefined,
+    });
+
+    expect(parsed.created_date).toBe('2026-07-28');
+    expect(parsed.card_type).toBe('');
+    expect(parsed.card_last_four).toBeNull();
+  });
+
   it('acepta resumen, catálogos y detalle', () => {
     expect(
       paymentsSummarySchema.parse({

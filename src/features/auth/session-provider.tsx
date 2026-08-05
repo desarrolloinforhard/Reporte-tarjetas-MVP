@@ -10,6 +10,7 @@ import {
 import {
   getCurrentSession,
   getCurrentUser,
+  getTrustedLocalSession,
   login as loginRequest,
   logoutSession,
   refreshSession,
@@ -51,6 +52,16 @@ export function SessionProvider({ children }: PropsWithChildren) {
     queryClient.clear();
   }
 
+  async function applyTrustedLocalSession() {
+    const local = await getTrustedLocalSession();
+    if (!local) return false;
+    setAccessToken(null);
+    await setStoredRefreshToken(null);
+    setSession(local.session);
+    setUser(local.user);
+    return true;
+  }
+
   useEffect(() => {
     return subscribeToUnauthenticated(() => {
       void clearSession();
@@ -73,9 +84,16 @@ export function SessionProvider({ children }: PropsWithChildren) {
           }
         } else {
           const refreshToken = await getStoredRefreshToken();
-          if (!refreshToken) return;
-          const result = await refreshSession(refreshToken);
-          if (active) await applyAuthResult(result);
+          if (refreshToken) {
+            try {
+              const result = await refreshSession(refreshToken);
+              if (active) await applyAuthResult(result);
+            } catch {
+              if (active && !(await applyTrustedLocalSession())) throw new Error('SESSION_RESTORE_FAILED');
+            }
+          } else if (active) {
+            await applyTrustedLocalSession();
+          }
         }
       } catch (error) {
         if (!(error instanceof ApiError) || error.code !== 'UNAUTHENTICATED') {
@@ -122,6 +140,13 @@ export function SessionProvider({ children }: PropsWithChildren) {
       login: async (username, password) => {
         setLoading(true);
         try {
+          try {
+            if (await applyTrustedLocalSession()) return;
+          } catch (error) {
+            if (!(error instanceof ApiError) || error.code !== 'UNAUTHENTICATED') {
+              console.warn('No se detectÃ³ una sesiÃ³n local confiable; se usarÃ¡ el login normal.');
+            }
+          }
           await applyAuthResult(await loginRequest(username, password));
         } finally {
           setLoading(false);

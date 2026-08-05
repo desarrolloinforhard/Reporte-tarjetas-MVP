@@ -3,7 +3,6 @@ import { Href, usePathname, useRouter } from 'expo-router';
 import { PropsWithChildren, useMemo, useState } from 'react';
 import {
   Image,
-  Modal,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -115,18 +114,15 @@ export function AppShell({ children }: PropsWithChildren) {
   const router = useRouter();
   const pathname = usePathname();
   const { colors } = useAppTheme();
-  const [menuOpen, setMenuOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const isMobile = width < breakpoints.tablet;
   const activeRoute = useMemo(
     () => appRoutes.find((route) => isRouteActive(pathname, route.href)) ?? appRoutes[0],
     [pathname],
   );
-  const mobileRoutes = appRoutes.slice(0, 4);
-  const moreActive = settingsOpen || appRoutes.slice(4).some((route) => isRouteActive(pathname, route.href));
+  const mobileRoutes = appRoutes.slice(0, 5);
 
   function navigate(route: AppRoute) {
-    setMenuOpen(false);
     if (route.href === '/configuracion') {
       setSettingsOpen(true);
       return;
@@ -175,6 +171,19 @@ export function AppShell({ children }: PropsWithChildren) {
                 </Text>
                 <Text style={[styles.mobileCompany, { color: colors.textMuted }]}>Inforhard</Text>
               </View>
+              <Pressable
+                accessibilityLabel="Abrir configuración"
+                accessibilityRole="button"
+                onPress={() => setSettingsOpen(true)}
+                style={({ pressed }) => [
+                  styles.headerSettings,
+                  {
+                    backgroundColor: pressed ? colors.primarySoft : colors.surfaceMuted,
+                    borderColor: settingsOpen ? colors.primary : colors.border,
+                  },
+                ]}>
+                <Ionicons color={colors.text} name="settings-outline" size={20} />
+              </Pressable>
               <View style={[styles.avatar, { backgroundColor: colors.primarySoft }]}>
                 <Text style={[styles.avatarText, { color: colors.primary }]}>NG</Text>
               </View>
@@ -211,72 +220,11 @@ export function AppShell({ children }: PropsWithChildren) {
                   </Pressable>
                 );
               })}
-              <Pressable
-                accessibilityLabel="Abrir más secciones"
-                accessibilityRole="tab"
-                accessibilityState={{ selected: moreActive }}
-                onPress={() => setMenuOpen(true)}
-                style={[
-                  styles.bottomItem,
-                  {
-                    backgroundColor: moreActive ? 'rgba(255,255,255,0.20)' : 'transparent',
-                  },
-                ]}>
-                <Text
-                  style={[
-                    styles.bottomLabel,
-                    {
-                      color: '#FFFFFF',
-                      fontWeight: moreActive ? '900' : '700',
-                      opacity: moreActive ? 1 : 0.82,
-                    },
-                  ]}>
-                  Más
-                </Text>
-              </Pressable>
             </View>
           ) : null}
         </View>
       </View>
 
-      <Modal
-        animationType="fade"
-        onRequestClose={() => setMenuOpen(false)}
-        transparent
-        visible={menuOpen}>
-        <Pressable
-          accessibilityLabel="Cerrar menú"
-          onPress={() => setMenuOpen(false)}
-          style={[styles.modalBackdrop, { backgroundColor: colors.overlay }]}>
-          <Pressable
-            onPress={(event) => event.stopPropagation()}
-            style={[styles.mobileMenu, { backgroundColor: colors.surface }]}>
-            <View style={styles.menuHeader}>
-              <View>
-                <Text style={[styles.menuTitle, { color: colors.text }]}>Más secciones</Text>
-                <Text style={[styles.menuDescription, { color: colors.textMuted }]}>
-                  Navegación y preferencias
-                </Text>
-              </View>
-              <Pressable
-                accessibilityLabel="Cerrar"
-                accessibilityRole="button"
-                onPress={() => setMenuOpen(false)}
-                style={[styles.closeButton, { backgroundColor: colors.surfaceMuted }]}>
-                <Text style={[styles.closeText, { color: colors.text }]}>×</Text>
-              </Pressable>
-            </View>
-            {appRoutes.slice(4).map((route) => (
-              <NavItem
-                activeOverride={route.href === '/configuracion' ? settingsOpen : undefined}
-                key={route.href}
-                onPress={() => navigate(route)}
-                route={route}
-              />
-            ))}
-          </Pressable>
-        </Pressable>
-      </Modal>
       <SettingsModal onClose={() => setSettingsOpen(false)} visible={settingsOpen} />
     </SafeAreaView>
   );
@@ -406,6 +354,14 @@ const styles = StyleSheet.create({
   avatarText: {
     fontSize: 12,
     fontWeight: '900',
+  },
+  headerSettings: {
+    width: 38,
+    height: 38,
+    borderWidth: 1,
+    borderRadius: 19,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   bottomBar: {
     position: 'absolute',

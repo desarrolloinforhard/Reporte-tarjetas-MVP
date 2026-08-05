@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Modal, Platform, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 
 import { ScreenFrame } from '@/components/layout/screen-frame';
@@ -29,6 +29,7 @@ const providerOptions = [
   { value: 'mercadopago', label: 'Mercado Pago' },
 ];
 const providerLabel = (value: string) => ({ clover: 'Clover', mercadopago: 'Mercado Pago' })[value] || value;
+const PAGE_SIZE = 20;
 const money = (value: number) => new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS' }).format(value);
 function isoDaysAgo(days: number) {
   const date = new Date();
@@ -46,6 +47,8 @@ export function DataQualityScreen() {
   const [filtersVisible, setFiltersVisible] = useState(false);
   const [selected, setSelected] = useState<QualityFinding | null>(null);
   const [paymentDetailVisible, setPaymentDetailVisible] = useState(false);
+  const [referenceDraft, setReferenceDraft] = useState('');
+  const [pageOffset, setPageOffset] = useState(0);
   const [filters, setFilters] = useState<QualityFilters>({
     from: isoDaysAgo(30),
     to: isoDaysAgo(0),
@@ -54,17 +57,36 @@ export function DataQualityScreen() {
     min_amount: '',
     max_amount: '',
   });
+  useEffect(() => {
+    const timeout = setTimeout(() => {
+      setPageOffset(0);
+      setFilters((current) => {
+        if ((current.external_reference || '') === referenceDraft) return current;
+        return { ...current, external_reference: referenceDraft };
+      });
+    }, 650);
+    return () => clearTimeout(timeout);
+  }, [referenceDraft]);
   const rangeError = filters.from > filters.to;
   const queryKey = useMemo(() => JSON.stringify(filters), [filters]);
-  const qualityQuery = useQuery({ queryKey: ['data-quality', queryKey], queryFn: () => getDataQuality(filters), enabled: !rangeError });
+  const qualityQuery = useQuery({
+    queryKey: ['data-quality', queryKey],
+    queryFn: () => getDataQuality(filters),
+    enabled: !rangeError,
+    placeholderData: (previousData) => previousData,
+  });
   const detailQuery = useQuery({
     queryKey: ['quality-detail', selected?.provider, selected?.payment_id],
     queryFn: () => getQualityPaymentDetail(selected!.provider, selected!.payment_id),
     enabled: Boolean(selected),
   });
   const rows = qualityQuery.data?.[activeTab] || [];
+  const pageRows = rows.slice(pageOffset, pageOffset + PAGE_SIZE);
   const summary = qualityQuery.data?.summary;
-  const setFilter = (key: keyof QualityFilters, value: string) => setFilters((current) => ({ ...current, [key]: value }));
+  const setFilter = (key: keyof QualityFilters, value: string) => {
+    setPageOffset(0);
+    setFilters((current) => ({ ...current, [key]: value }));
+  };
   const rowColor = (row: QualityFinding) =>
     row.category === 'orphans' && row.reason === 'sale_not_found'
       ? (isDark ? colors.dangerSoft : '#F4BBB6')
@@ -106,7 +128,7 @@ export function DataQualityScreen() {
       ) : null}
 
       <View style={[styles.mainContent, filtersSidebar && styles.mainContentDesktop]}>
-      {qualityQuery.isPending ? <FeedbackState title="Analizando calidad de datos" description="Revisando los datos sintéticos del período." /> : null}
+      {qualityQuery.isPending && !qualityQuery.data ? <FeedbackState title="Analizando calidad de datos" description="Revisando los datos sintéticos del período." /> : null}
       {qualityQuery.isError ? <FeedbackState title="No se pudo completar el análisis" description="Verificá la sesión y el backend aislado." actionLabel="Reintentar" onAction={() => qualityQuery.refetch()} /> : null}
       {qualityQuery.data ? (
         <Card title="Calidad de datos" style={{ ...styles.section, borderColor: colors.accent }}>
@@ -128,17 +150,17 @@ export function DataQualityScreen() {
           ) : null}
           <TextField
             label="Buscar referencia"
-            onChangeText={(value) => setFilter('external_reference', value)}
+            onChangeText={setReferenceDraft}
             placeholder="Número de referencia"
-            value={filters.external_reference || ''}
+            value={referenceDraft}
           />
           <ScrollView horizontal showsHorizontalScrollIndicator={false}>
             <View style={styles.tabs}>
               {tabs.map((tab) => (
-                <Pressable key={tab.key} onPress={() => setActiveTab(tab.key)} style={[styles.tab, activeTab === tab.key && { backgroundColor: colors.primarySoft, borderBottomColor: colors.primary }]}>
+                <Pressable key={tab.key} onPress={() => { setActiveTab(tab.key); setPageOffset(0); }} style={[styles.tab, activeTab === tab.key && { backgroundColor: colors.primarySoft, borderBottomColor: colors.primary }]}>
                   <Text
                     style={{
-                      color: activeTab === tab.key ? '#102018' : colors.text,
+                      color: activeTab === tab.key ? (isDark ? '#FFFFFF' : '#102018') : colors.text,
                       fontWeight: '700',
                     }}>
                     {tab.label}
@@ -167,12 +189,12 @@ export function DataQualityScreen() {
                     </Text>
                   ))}
                 </View>
-                {rows.map((row) => <QualityRow key={`${row.category}-${row.provider}-${row.payment_id}`} row={row} color={rowColor(row)} textColor={colors.text} onPress={() => openFinding(row)} />)}
+                {pageRows.map((row, index) => <QualityRow key={`${row.category}-${row.provider}-${row.payment_id}-${pageOffset + index}`} row={row} color={rowColor(row)} textColor={colors.text} onPress={() => openFinding(row)} />)}
               </View>
             </ScrollView>
           ) : null}
-          {!desktop && rows.length ? <View style={styles.cards}>{rows.map((row) => (
-            <Pressable key={`${row.category}-${row.provider}-${row.payment_id}`} onPress={() => openFinding(row)}>
+          {!desktop && rows.length ? <View style={styles.cards}>{pageRows.map((row, index) => (
+            <Pressable key={`${row.category}-${row.provider}-${row.payment_id}-${pageOffset + index}`} onPress={() => openFinding(row)}>
               <Card style={{ ...styles.findingCard, backgroundColor: rowColor(row) }}>
                 <View style={styles.rowBetween}><Text style={[styles.amount, { color: colors.text }]}>{money(row.amount)}</Text><Badge label={providerLabel(row.provider)} tone="warning" /></View>
                 <Text style={{ color: colors.text, fontWeight: '700' }}>{row.issue}</Text>
@@ -180,6 +202,25 @@ export function DataQualityScreen() {
               </Card>
             </Pressable>
           ))}</View> : null}
+          {rows.length > PAGE_SIZE ? (
+            <View style={styles.rowBetween}>
+              <Button
+                disabled={pageOffset === 0}
+                onPress={() => setPageOffset((value) => Math.max(0, value - PAGE_SIZE))}
+                variant="secondary">
+                Anterior
+              </Button>
+              <Text style={[styles.muted, { color: colors.textMuted }]}>
+                {pageOffset + 1}â€“{Math.min(pageOffset + PAGE_SIZE, rows.length)} de {rows.length}
+              </Text>
+              <Button
+                disabled={pageOffset + PAGE_SIZE >= rows.length}
+                onPress={() => setPageOffset((value) => value + PAGE_SIZE)}
+                variant="secondary">
+                Siguiente
+              </Button>
+            </View>
+          ) : null}
         </Card>
       ) : null}
       </View>
@@ -210,7 +251,7 @@ function findingContent(finding: QualityFinding) {
       title: 'Posible pago duplicado',
       severity: 'Advertencia',
       tone: 'warning' as const,
-      reason: 'El pago coincide con otro registro según fecha, hora e importe.',
+      reason: 'El pago comparte el mismo proveedor e ID externo exacto con otro registro.',
       recommendation: 'Compará ambas referencias y proveedores antes de realizar cualquier corrección. Este análisis no elimina ni modifica registros.',
       affected: 'Referencia, fecha, importe y proveedor',
     };

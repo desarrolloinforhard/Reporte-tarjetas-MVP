@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { Href, useRouter } from 'expo-router';
 import { useMemo, useState } from 'react';
-import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Image, Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 
 import { ScreenFrame } from '@/components/layout/screen-frame';
 import { Badge } from '@/components/ui/badge';
@@ -14,7 +14,7 @@ import {
   getDashboardData,
   ProviderComparison,
 } from '@/features/dashboard/dashboard.api';
-import { radii, spacing } from '@/theme/tokens';
+import { breakpoints, radii, spacing } from '@/theme/tokens';
 import { useAppTheme } from '@/theme/theme-provider';
 import { formatDate } from '@/utils/date-format';
 
@@ -120,6 +120,8 @@ function dailyComparison(rows: DailyPayment[], from: string, to: string): DailyC
 
 export function DashboardScreen() {
   const { colors } = useAppTheme();
+  const { width } = useWindowDimensions();
+  const mobile = width < breakpoints.tablet;
   const router = useRouter();
   const currentMonth = monthStart(startOfDay());
   const [period, setPeriod] = useState<Period>('today');
@@ -391,6 +393,7 @@ export function DashboardScreen() {
             <ProviderComparisonSection
               onSelect={(provider) => navigate('/pagos', { provider })}
               rows={dashboardQuery.data?.providers || []}
+              stacked={mobile}
             />
           ) : null}
 
@@ -624,10 +627,12 @@ function DailyEvolution({
 function ProviderComparisonSection({
   rows,
   compact = false,
+  stacked = false,
   onSelect,
 }: {
   rows: ProviderComparison[];
   compact?: boolean;
+  stacked?: boolean;
   onSelect: (provider: string) => void;
 }) {
   const { colors } = useAppTheme();
@@ -641,7 +646,12 @@ function ProviderComparisonSection({
           No hay proveedores con actividad en el período.
         </Text>
       ) : (
-        <View style={[styles.providerGrid, compact && styles.providerGridCompact]}>
+        <View
+          style={[
+            styles.providerGrid,
+            compact && styles.providerGridCompact,
+            stacked && styles.providerGridStacked,
+          ]}>
           {rows.map((row) => (
             <Pressable
               accessibilityRole="button"
@@ -650,6 +660,7 @@ function ProviderComparisonSection({
               style={({ pressed }) => [
                 styles.providerCard,
                 compact && styles.providerCardCompact,
+                stacked && styles.providerCardStacked,
                 {
                   backgroundColor: pressed ? '#F0F8F3' : '#FFFFFF',
                   borderColor: '#D4E1D8',
@@ -836,6 +847,7 @@ const styles = StyleSheet.create({
   noticeDescription: { fontSize: 12, lineHeight: 18 },
   providerGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md },
   providerGridCompact: { gap: spacing.sm },
+  providerGridStacked: { alignItems: 'stretch' },
   providerCard: {
     flexGrow: 1,
     flexBasis: 330,
@@ -850,6 +862,12 @@ const styles = StyleSheet.create({
     minWidth: 0,
     padding: spacing.sm,
     gap: spacing.sm,
+  },
+  providerCardStacked: {
+    width: '100%',
+    flexBasis: '100%',
+    flexGrow: 0,
+    minWidth: 0,
   },
   providerHeader: { flexDirection: 'row', justifyContent: 'space-between', gap: spacing.sm },
   providerTitle: { fontSize: 16, fontWeight: '800' },

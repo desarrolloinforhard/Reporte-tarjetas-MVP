@@ -1,7 +1,11 @@
 import { z } from 'zod';
 
 import { apiRequest, apiRequestWithMeta } from '@/api/client';
-import { paymentDetailSchema, paymentSchema } from '@/features/payments/payments.api';
+import {
+  paymentBaseSchema,
+  paymentDetailSchema,
+  paymentSchema,
+} from '@/features/payments/payments.api';
 import { setNormalizedAmountParam } from '@/utils/amount-filter';
 
 export const qualitySummarySchema = z.object({
@@ -21,13 +25,18 @@ const duplicateGroupSchema = z.object({
   payments: z.array(paymentSchema),
 });
 
-const findingSchema = paymentSchema.extend({
+const findingSchema = paymentBaseSchema.extend({
   payment_id: z.string(),
   missing_fields: z.array(z.string()).optional(),
   reason: z.string().optional(),
   reason_label: z.string().optional(),
   reference_amount: z.number().optional(),
-});
+}).transform((finding) => ({
+  ...finding,
+  created_date: finding.created_date || finding.created_at.slice(0, 10),
+  card_type: finding.card_type || '',
+  card_last_four: finding.card_last_four ?? null,
+}));
 
 export type QualityCategory = 'duplicates' | 'missing' | 'orphans' | 'outliers';
 export type QualityFinding = z.infer<typeof findingSchema> & {
@@ -43,7 +52,7 @@ export type QualityFilters = {
   max_amount?: string;
 };
 
-function params(filters: QualityFilters) {
+function params(filters: QualityFilters, offset = 0) {
   const query = new URLSearchParams();
   Object.entries(filters).forEach(([key, value]) => {
     if (key === 'min_amount' || key === 'max_amount') {
@@ -53,19 +62,32 @@ function params(filters: QualityFilters) {
     }
   });
   query.set('limit', '100');
+  query.set('offset', String(offset));
   return query.toString();
 }
 
 export async function getDataQuality(filters: QualityFilters) {
+  const allPages = async <T>(path: string, schema: z.ZodType<T>) => {
+    const items: T[] = [];
+    let offset = 0;
+    while (offset < 10_000) {
+      const page = await apiRequestWithMeta(
+        `${path}?${params(filters, offset)}`,
+        z.array(schema),
+      );
+      items.push(...page.data);
+      if (!page.meta.has_more || page.data.length === 0) return items;
+      offset = Number(page.meta.next_offset ?? offset + page.data.length);
+    }
+    return items;
+  };
   const query = params(filters);
-  const flatRows = async (path: string) =>
-    (await apiRequestWithMeta(path, z.array(findingSchema))).data;
   const [summary, duplicateGroups, missing, orphans, outliers] = await Promise.all([
     apiRequest(`/data-quality/payments?${query}`, qualitySummarySchema),
-    apiRequest(`/data-quality/duplicates?${query}`, z.array(duplicateGroupSchema)),
-    flatRows(`/data-quality/missing-references?${query}`),
-    flatRows(`/data-quality/orphan-payments?${query}`),
-    flatRows(`/data-quality/amount-outliers?${query}`),
+    allPages('/data-quality/duplicates', duplicateGroupSchema),
+    allPages('/data-quality/missing-references', findingSchema),
+    allPages('/data-quality/orphan-payments', findingSchema),
+    allPages('/data-quality/amount-outliers', findingSchema),
   ]);
   const duplicates: QualityFinding[] = duplicateGroups.flatMap((group) =>
     group.payments.map((payment) => ({

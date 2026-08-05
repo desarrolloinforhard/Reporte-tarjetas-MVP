@@ -89,6 +89,32 @@ export type DailyPayment = z.infer<typeof dailyPaymentSchema>;
 export type ProviderComparison = z.infer<typeof providerComparisonSchema>;
 export type SyncStatus = z.infer<typeof syncStatusSchema>;
 
+export function exactProviderComparison(
+  summary: ReportSummary,
+  comparison: ProviderComparison[],
+): ProviderComparison[] {
+  const comparisonByProvider = new Map(
+    comparison.map((row) => [row.provider.toLowerCase(), row]),
+  );
+
+  return summary.by_provider.map((provider) => {
+    const fallback = comparisonByProvider.get(provider.provider.toLowerCase());
+    const paymentsCount = provider.payments_count;
+
+    if (!provider.totals_exact && fallback) return fallback;
+
+    return {
+      provider: provider.provider,
+      payments_count: paymentsCount,
+      approved_rate: paymentsCount ? (provider.approved_count / paymentsCount) * 100 : 0,
+      rejected_rate: paymentsCount ? (provider.rejected_count / paymentsCount) * 100 : 0,
+      total_amount: provider.total_amount,
+      average_ticket: paymentsCount ? provider.total_amount / paymentsCount : 0,
+      refund_amount: provider.refund_amount,
+    };
+  });
+}
+
 export type DashboardData = {
   summary: ReportSummary;
   reconciliation: z.infer<typeof reconciliationSummarySchema>;
@@ -116,7 +142,13 @@ export async function getDashboardData(from: string, to: string): Promise<Dashbo
     apiRequest('/sync/status', syncStatusSchema),
   ]);
 
-  return { summary, reconciliation, daily, providers, sync };
+  return {
+    summary,
+    reconciliation,
+    daily,
+    providers: exactProviderComparison(summary, providers),
+    sync,
+  };
 }
 
 export function getDailyPayments(from: string, to: string): Promise<DailyPayment[]> {

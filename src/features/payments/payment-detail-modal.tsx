@@ -16,7 +16,9 @@ const money = (value: number) =>
   new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS' }).format(value);
 const dateTime = formatDateTime;
 const verdict = (status: string) => {
-  if (status === 'matched') return { label: 'Conciliado', tone: 'success' as const };
+  if (status === 'matched' || status === 'reconciled') return { label: 'Conciliado', tone: 'success' as const };
+  if (status === 'rejected') return { label: 'Rechazado', tone: 'danger' as const };
+  if (status === 'refunded') return { label: 'Devuelto', tone: 'warning' as const };
   if (status === 'sale_not_found') return { label: 'Venta no encontrada', tone: 'danger' as const };
   return { label: 'Pendiente de revisión', tone: 'warning' as const };
 };
@@ -62,15 +64,19 @@ function PaymentCard({ payment, attempt = false }: { payment: Payment; attempt?:
 
 export function PaymentDetailModal({
   data,
+  error,
   loading,
   onClose,
+  onRetry,
   selected,
   visible,
   desktop,
 }: {
   data?: PaymentDetail;
+  error?: boolean;
   loading: boolean;
   onClose: () => void;
+  onRetry?: () => void;
   selected: Payment | null;
   visible: boolean;
   desktop: boolean;
@@ -87,6 +93,10 @@ export function PaymentDetailModal({
     Boolean(data && !data.sale && data.payment_summary.status === 'pending_review') && !isAttempt;
   const status = isRejectedAttempt
     ? { label: 'Rechazado · intento no aplicado', tone: 'danger' as const }
+    : data && !data.sale && data.payment.status === 'approved'
+      ? { label: 'Aprobado', tone: 'success' as const }
+      : data && !data.sale && data.payment.status === 'rejected'
+        ? { label: 'Rechazado', tone: 'danger' as const }
     : data
       ? verdict(data.payment_summary.status)
       : verdict('');
@@ -128,9 +138,18 @@ export function PaymentDetailModal({
           </View>
 
           {loading ? <Text style={{ color: colors.textMuted }}>Cargando detalle…</Text> : null}
+          {error && !loading ? (
+            <View style={styles.loadError}>
+              <Text style={{ color: colors.danger }}>No se pudo cargar el detalle del pago.</Text>
+              {onRetry ? <Button onPress={onRetry}>Reintentar</Button> : null}
+            </View>
+          ) : null}
           {data ? (
             <>
               <Badge label={status.label} tone={status.tone} />
+              {data.payment_summary.applied_payments_count > 1 ? (
+                <Badge label="Pago combinado" tone="info" />
+              ) : null}
               {isAttempt ? (
                 <View
                   style={[
@@ -322,9 +341,9 @@ export function PaymentDetailModal({
                           </Text>
                         ))}
                       </View>
-                      {data.sale.items.map((item) => (
+                      {data.sale.items.map((item, index) => (
                         <View
-                          key={item.code}
+                          key={`${item.code}-${item.description}-${index}`}
                           style={[styles.productRow, { borderBottomColor: colors.border }]}>
                           <Text
                             style={[
@@ -370,8 +389,10 @@ export function PaymentDetailModal({
                           </Text>
                         </View>
                       ))}
-                      {data.sale.taxes.map((tax) => (
-                        <Text key={tax.vat_rate} style={{ color: colors.textMuted, padding: 10 }}>
+                      {data.sale.taxes.map((tax, index) => (
+                        <Text
+                          key={`${tax.vat_rate}-${tax.base_amount}-${index}`}
+                          style={{ color: colors.textMuted, padding: 10 }}>
                           IVA {tax.vat_rate}% · Base {money(tax.base_amount)} · IVA{' '}
                           {money(tax.vat_amount)}
                         </Text>
@@ -382,10 +403,21 @@ export function PaymentDetailModal({
 
                 {tab === 'payments' && data.sale ? (
                   <View style={styles.section}>
-                    <Text style={[styles.sectionTitle, { color: colors.text }]}>Medios aplicados</Text>
-                    {data.sale.payments.map((payment) => (
-                      <PaymentCard key={payment.id} payment={payment} />
+                    <Text style={[styles.sectionTitle, { color: colors.text }]}>Pagos electrónicos asociados</Text>
+                    {data.sale.payments.map((payment, index) => (
+                      <PaymentCard key={`${payment.provider}:${payment.id}:${index}`} payment={payment} />
                     ))}
+                    {data.sale.sale_tenders.length ? (
+                      <>
+                        <Text style={[styles.sectionTitle, { color: colors.text }]}>Medios aplicados en caja</Text>
+                        <Text style={{ color: colors.textMuted }}>
+                          Son los medios registrados por la venta; no crean filas en el listado de Pagos.
+                        </Text>
+                        {data.sale.sale_tenders.map((payment, index) => (
+                          <PaymentCard key={`tender:${payment.id}:${index}`} payment={payment} />
+                        ))}
+                      </>
+                    ) : null}
                     {data.sale.payment_attempts.length ? (
                       <>
                         <Text style={[styles.sectionTitle, { color: colors.text }]}>
@@ -394,8 +426,8 @@ export function PaymentDetailModal({
                         <Text style={{ color: colors.textMuted }}>
                           Se muestran para auditoría y no forman parte del total cobrado.
                         </Text>
-                        {data.sale.payment_attempts.map((payment) => (
-                          <PaymentCard attempt key={payment.id} payment={payment} />
+                        {data.sale.payment_attempts.map((payment, index) => (
+                          <PaymentCard attempt key={`${payment.provider}:${payment.id}:${index}`} payment={payment} />
                         ))}
                       </>
                     ) : null}
@@ -457,6 +489,7 @@ export function PaymentDetailModal({
 }
 
 const styles = StyleSheet.create({
+  loadError: { gap: spacing.md, alignItems: 'flex-start' },
   backdrop: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: spacing.md },
   modal: {
     width: '100%',

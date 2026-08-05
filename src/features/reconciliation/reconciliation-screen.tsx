@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { useLocalSearchParams } from 'expo-router';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Modal, Platform, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 
 import { ScreenFrame } from '@/components/layout/screen-frame';
@@ -84,6 +84,7 @@ export function ReconciliationScreen() {
   const [differencesVisible, setDifferencesVisible] = useState(false);
   const [exportVisible, setExportVisible] = useState(false);
   const [selected, setSelected] = useState<ReconciliationRow | null>(null);
+  const [referenceDraft, setReferenceDraft] = useState('');
   const [filters, setFilters] = useState<ReconciliationFilters>({
     from: params.from || isoDaysAgo(30),
     to: params.to || isoDaysAgo(0),
@@ -95,22 +96,34 @@ export function ReconciliationScreen() {
     limit: PAGE_SIZE,
     offset: 0,
   });
+  useEffect(() => {
+    const timeout = setTimeout(() => {
+      setFilters((current) => {
+        if ((current.external_reference || '') === referenceDraft) return current;
+        return { ...current, external_reference: referenceDraft, offset: 0 };
+      });
+    }, 650);
+    return () => clearTimeout(timeout);
+  }, [referenceDraft]);
   const rangeError = validateRange(filters.from, filters.to);
   const filterKey = useMemo(() => JSON.stringify(filters), [filters]);
   const listQuery = useQuery({
     queryKey: ['reconciliation', filterKey],
     queryFn: () => getReconciliationRows(filters),
     enabled: !rangeError,
+    placeholderData: (previousData) => previousData,
   });
   const summaryQuery = useQuery({
     queryKey: ['reconciliation-summary', filterKey],
     queryFn: () => getReconciliationSummary(filters),
     enabled: !rangeError,
+    placeholderData: (previousData) => previousData,
   });
   const detailQuery = useQuery({
     queryKey: ['reconciliation-detail', selected?.provider, selected?.payment_id],
     queryFn: () => getReconciliationDetail(selected!.provider, selected!.payment_id),
     enabled: Boolean(selected),
+    retry: false,
   });
   const setFilter = (key: keyof ReconciliationFilters, value: string | number) =>
     setFilters((current) => ({ ...current, [key]: value, offset: key === 'offset' ? Number(value) : 0 }));
@@ -193,7 +206,7 @@ export function ReconciliationScreen() {
       ) : null}
 
       <View style={[styles.mainContent, filtersSidebar && styles.mainContentDesktop]}>
-      {listQuery.isPending ? <FeedbackState title="Cargando conciliación" description="Comparando fixtures de pagos y ventas." /> : null}
+      {listQuery.isPending && !listQuery.data ? <FeedbackState title="Cargando conciliación" description="Comparando fixtures de pagos y ventas." /> : null}
       {listQuery.isError ? <FeedbackState title="No se pudo cargar la conciliación" description="Verificá que el backend aislado esté activo." actionLabel="Reintentar" onAction={() => listQuery.refetch()} /> : null}
       {listQuery.data ? (
         <Card style={{ ...styles.sectionCard, borderColor: colors.accent }} title="Resultados">
@@ -265,9 +278,9 @@ export function ReconciliationScreen() {
             <View style={styles.searchField}>
               <TextField
                 label="Buscar referencia"
-                onChangeText={(value) => setFilter('external_reference', value)}
+                onChangeText={setReferenceDraft}
                 placeholder="Número de referencia"
-                value={filters.external_reference}
+                value={referenceDraft}
               />
             </View>
             <Button disabled={!listQuery.data.total} onPress={() => setExportVisible(true)} variant="secondary">
@@ -457,8 +470,10 @@ export function ReconciliationScreen() {
         key={selected?.payment_id ?? 'reconciliation-detail'}
         data={detailQuery.data}
         desktop={desktop}
-        loading={detailQuery.isPending && Boolean(selected)}
+        error={detailQuery.isError}
+        loading={detailQuery.isFetching}
         onClose={() => setSelected(null)}
+        onRetry={() => detailQuery.refetch()}
         selected={detailQuery.data?.payment ?? null}
         visible={Boolean(selected)}
       />

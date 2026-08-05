@@ -1,6 +1,3 @@
-import * as FileSystem from 'expo-file-system/legacy';
-import * as Print from 'expo-print';
-import * as Sharing from 'expo-sharing';
 import { Platform } from 'react-native';
 
 export type ExportColumn<T> = {
@@ -67,6 +64,12 @@ export async function exportCsv<T>(name: string, columns: ExportColumn<T>[], row
     return;
   }
 
+  // Estos módulos incluyen código nativo. Se cargan solamente al exportar para
+  // que un development build antiguo pueda iniciar y mostrar el resto de la app.
+  const [FileSystem, Sharing] = await Promise.all([
+    import('expo-file-system/legacy'),
+    import('expo-sharing'),
+  ]);
   const uri = `${FileSystem.cacheDirectory}${filename}`;
   await FileSystem.writeAsStringAsync(uri, `\uFEFF${csv}`, {
     encoding: FileSystem.EncodingType.UTF8,
@@ -101,6 +104,7 @@ export async function exportPdf<T>(
     return;
   }
 
+  const [Print, Sharing] = await Promise.all([import('expo-print'), import('expo-sharing')]);
   const { uri } = await Print.printToFileAsync({ html });
   await Sharing.shareAsync(uri, {
     mimeType: 'application/pdf',

@@ -21,7 +21,7 @@ describe('API de autenticación web', () => {
     await loginForPlatform('web', 'operador', 'secreto-local');
 
     expect(mockedApiRequest).toHaveBeenCalledWith(
-      '/auth/login',
+      '/sessions/login',
       expect.anything(),
       {
         method: 'POST',
@@ -41,7 +41,7 @@ describe('API de autenticación web', () => {
     await logoutSessionForPlatform('web');
 
     expect(mockedApiRequest).toHaveBeenCalledWith(
-      '/auth/logout',
+      '/sessions/logout',
       expect.anything(),
       {
         method: 'POST',

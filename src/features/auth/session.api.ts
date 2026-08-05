@@ -24,6 +24,17 @@ export function getCurrentUser(): Promise<CurrentUser> {
   });
 }
 
+export async function getTrustedLocalSession(): Promise<{
+  session: CurrentSession;
+  user: CurrentUser;
+} | null> {
+  const [session, user] = await Promise.all([getCurrentSession(), getCurrentUser()]);
+  if (!session.authenticated || session.auth_mode !== 'local' || !user.is_authenticated) {
+    return null;
+  }
+  return { session, user };
+}
+
 export function login(username: string, password: string): Promise<AuthResult> {
   return loginForPlatform(Platform.OS, username, password);
 }
@@ -34,9 +45,8 @@ export function loginForPlatform(
   password: string,
 ): Promise<AuthResult> {
   const webClient = platform === 'web';
-  const path = webClient ? '/auth/login' : '/sessions/login';
 
-  return apiRequest(path, authResultSchema, {
+  return apiRequest('/sessions/login', authResultSchema, {
     method: 'POST',
     credentials: 'include',
     body: {
@@ -67,9 +77,8 @@ export function logoutSessionForPlatform(
   refreshToken?: string | null,
 ) {
   const webClient = platform === 'web';
-  const path = webClient ? '/auth/logout' : '/sessions/logout';
 
-  return apiRequest(path, logoutResultSchema, {
+  return apiRequest('/sessions/logout', logoutResultSchema, {
     method: 'POST',
     credentials: 'include',
     ...(webClient

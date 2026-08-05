@@ -1,6 +1,26 @@
 # Estado actual
 
-Última actualización: 2026-07-30.
+Última actualización: 2026-08-05.
+
+## Paridad Pagos y detalle en curso
+
+- Se auditó el flujo legacy y se documentó en `context/PARIDAD_PAGOS_DETALLE.md`.
+- El listado conserva cada intento de Mercado Pago/Clover como fila independiente.
+- El detalle separa pagos electrónicos, intentos no aplicados y medios de caja.
+- La identidad del seleccionado usa IDs exactos; no se asocia por hora, importe
+  ni terminal.
+- Pago combinado usa el conteo contractual de medios aplicados y el efectivo
+  permanece dentro del detalle.
+- Se corrigieron filtros combinados de referencia/fecha/importe y el importe
+  visible de Conciliación.
+- Una comprobación visual de solo lectura sobre el MVP operativo confirmó que
+  dos intentos visibles sin filtro desaparecían al aplicar un rango de importe.
+  La causa estaba en la ventana previa al filtrado de fuentes JSON legadas; la
+  corrección y su regresión sanitizada quedaron en el backend aislado.
+- La API aislada se verificó con base deshabilitada y fixtures; no contiene las
+  referencias operativas suministradas y no se consultó producción.
+- La verificación directa de relaciones con datos reales sigue pendiente de un
+  staging o una réplica de lectura autorizada; desarrollo no apunta a producción.
 
 ## Implementado
 

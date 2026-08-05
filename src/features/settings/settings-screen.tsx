@@ -228,9 +228,13 @@ export function SettingsModal({ visible, onClose }: { visible: boolean; onClose:
 
   return (
     <Modal animationType="fade" onRequestClose={onClose} transparent visible={visible}>
-      <Pressable onPress={onClose} style={[styles.modalBackdrop, { backgroundColor: colors.overlay }]}>
+      <View style={styles.modalBackdrop}>
         <Pressable
-          onPress={(event) => event.stopPropagation()}
+          accessibilityLabel="Cerrar configuración"
+          onPress={onClose}
+          style={[styles.modalOverlay, { backgroundColor: colors.overlay }]}
+        />
+        <View
           style={[styles.modalPanel, desktop && styles.modalPanelDesktop, { backgroundColor: colors.surfaceElevated }]}>
           <View style={[styles.modalHeader, { borderBottomColor: colors.border }]}>
             <View style={styles.modalHeading}>
@@ -246,11 +250,19 @@ export function SettingsModal({ visible, onClose }: { visible: boolean; onClose:
               <Text style={[styles.modalCloseText, { color: colors.text }]}>×</Text>
             </Pressable>
           </View>
-          <ScrollView contentContainerStyle={styles.modalBody} showsVerticalScrollIndicator>
+          <ScrollView
+            alwaysBounceVertical={false}
+            contentContainerStyle={styles.modalBody}
+            keyboardShouldPersistTaps="handled"
+            nestedScrollEnabled
+            overScrollMode="always"
+            scrollEnabled
+            showsVerticalScrollIndicator
+            style={styles.modalScroll}>
             <SettingsContent compact />
           </ScrollView>
-        </Pressable>
-      </Pressable>
+        </View>
+      </View>
     </Modal>
   );
 }
@@ -386,15 +398,25 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     padding: spacing.md,
   },
+  modalOverlay: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    bottom: 0,
+    left: 0,
+  },
   modalPanel: {
     width: '100%',
     maxWidth: 720,
-    maxHeight: '92%',
+    height: '80%',
+    maxHeight: '80%',
     borderRadius: radii.xl,
     overflow: 'hidden',
   },
   modalPanelDesktop: {
     maxWidth: 1080,
+    height: '88%',
+    maxHeight: '88%',
   },
   modalHeader: {
     minHeight: 66,
@@ -428,5 +450,10 @@ const styles = StyleSheet.create({
   },
   modalBody: {
     padding: spacing.md,
+    paddingBottom: spacing.xl * 2,
+  },
+  modalScroll: {
+    flex: 1,
+    minHeight: 0,
   },
 });

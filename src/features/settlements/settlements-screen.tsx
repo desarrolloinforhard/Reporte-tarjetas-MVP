@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Modal, Platform, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 
 import { Badge } from '@/components/ui/badge';
@@ -124,6 +124,7 @@ export function SettlementsScreen() {
   const [filtersVisible, setFiltersVisible] = useState(false);
   const [exportVisible, setExportVisible] = useState(false);
   const [selected, setSelected] = useState<Settlement | null>(null);
+  const [referenceDraft, setReferenceDraft] = useState('');
   const [filters, setFilters] = useState<SettlementFilters>({
     from: daysAgo(30),
     to: daysAgo(0),
@@ -135,6 +136,15 @@ export function SettlementsScreen() {
     limit: PAGE_SIZE,
     offset: 0,
   });
+  useEffect(() => {
+    const timeout = setTimeout(() => {
+      setFilters((current) => {
+        if ((current.external_reference || '') === referenceDraft) return current;
+        return { ...current, external_reference: referenceDraft, offset: 0 };
+      });
+    }, 650);
+    return () => clearTimeout(timeout);
+  }, [referenceDraft]);
   const filterKey = useMemo(() => JSON.stringify(filters), [filters]);
   const rangeError = useMemo(
     () => validateRange(filters.from, filters.to),
@@ -144,11 +154,13 @@ export function SettlementsScreen() {
     queryKey: ['settlements', filterKey],
     queryFn: () => getSettlements(filters),
     enabled: !rangeError,
+    placeholderData: (previousData) => previousData,
   });
   const summaryQuery = useQuery({
     queryKey: ['settlements-summary', filterKey],
     queryFn: () => getSettlementsSummary(filters),
     enabled: !rangeError,
+    placeholderData: (previousData) => previousData,
   });
   const setFilter = (key: keyof SettlementFilters, value: string | number) =>
     setFilters((current) => ({
@@ -274,7 +286,7 @@ export function SettlementsScreen() {
       ) : null}
 
       <View style={[styles.mainContent, filtersSidebar && styles.mainContentDesktop]}>
-      {listQuery.isPending ? (
+      {listQuery.isPending && !listQuery.data ? (
         <FeedbackState description="Consultando fixtures sin acceso a ODBC." title="Cargando liquidaciones" />
       ) : null}
       {listQuery.isError ? (
@@ -314,9 +326,9 @@ export function SettlementsScreen() {
             <View style={styles.resultsSearchField}>
               <TextField
                 label="Buscar referencia"
-                onChangeText={(value) => setFilter('external_reference', value)}
+                onChangeText={setReferenceDraft}
                 placeholder="Número de referencia"
-                value={filters.external_reference}
+                value={referenceDraft}
               />
             </View>
             <Button disabled={!listQuery.data.total} onPress={() => setExportVisible(true)} variant="secondary">Exportar</Button>

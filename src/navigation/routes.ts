@@ -38,7 +38,7 @@ export const appRoutes: AppRoute[] = [
   {
     href: '/calidad',
     label: 'Calidad de datos',
-    shortLabel: 'Calidad',
+    shortLabel: 'C. Datos',
     icon: 'shield-checkmark-outline',
     description: 'Alertas y diagnóstico',
   },

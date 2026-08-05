@@ -25,13 +25,17 @@ export function Badge({ label, tone = 'neutral' }: { label: string; tone?: Badge
 const styles = StyleSheet.create({
   badge: {
     alignSelf: 'flex-start',
+    flexShrink: 1,
+    maxWidth: '100%',
     borderRadius: radii.pill,
     paddingHorizontal: spacing.sm,
     paddingVertical: 5,
   },
   label: {
+    flexShrink: 1,
     fontSize: 11,
     fontWeight: '800',
     letterSpacing: 0.2,
+    textAlign: 'center',
   },
 });
