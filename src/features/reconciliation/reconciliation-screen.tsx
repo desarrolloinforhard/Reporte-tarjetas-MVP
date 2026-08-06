@@ -11,6 +11,7 @@ import { Card } from '@/components/ui/card';
 import { DatePickerField } from '@/components/ui/date-picker-field';
 import { ExportDialog, ExportFormat } from '@/components/ui/export-dialog';
 import { FeedbackState } from '@/components/ui/feedback-state';
+import { FilterLoadingNotice } from '@/components/ui/filter-loading-notice';
 import { SelectField } from '@/components/ui/select-field';
 import { TextField } from '@/components/ui/text-field';
 import { PaymentDetailModal } from '@/features/payments/payment-detail-modal';
@@ -27,6 +28,7 @@ import { breakpoints, radii, spacing } from '@/theme/tokens';
 import { useAppTheme } from '@/theme/theme-provider';
 import { formatDate, formatDateTime } from '@/utils/date-format';
 import { exportCsv, exportPdf } from '@/utils/file-export';
+import { paginationLabel, paginationPageLabel } from '@/utils/pagination';
 
 const PAGE_SIZE = 20;
 const providers = { clover: 'Clover', mercadopago: 'Mercado Pago' };
@@ -96,6 +98,9 @@ export function ReconciliationScreen() {
     limit: PAGE_SIZE,
     offset: 0,
   });
+  const [filterDraft, setFilterDraft] = useState<ReconciliationFilters>(filters);
+  const [filterApplyStartedAt, setFilterApplyStartedAt] = useState(0);
+  const [filterApplyKey, setFilterApplyKey] = useState('');
   useEffect(() => {
     const timeout = setTimeout(() => {
       setFilters((current) => {
@@ -105,20 +110,38 @@ export function ReconciliationScreen() {
     }, 650);
     return () => clearTimeout(timeout);
   }, [referenceDraft]);
-  const rangeError = validateRange(filters.from, filters.to);
+  const rangeError = validateRange(filterDraft.from, filterDraft.to);
+  const appliedRangeError = validateRange(filters.from, filters.to);
   const filterKey = useMemo(() => JSON.stringify(filters), [filters]);
+  const summaryFilterKey = useMemo(
+    () => JSON.stringify({ ...filters, limit: undefined, offset: undefined }),
+    [filters],
+  );
   const listQuery = useQuery({
     queryKey: ['reconciliation', filterKey],
     queryFn: () => getReconciliationRows(filters),
-    enabled: !rangeError,
+    enabled: !appliedRangeError,
     placeholderData: (previousData) => previousData,
+    refetchOnWindowFocus: false,
+    staleTime: 60_000,
   });
   const summaryQuery = useQuery({
-    queryKey: ['reconciliation-summary', filterKey],
+    queryKey: ['reconciliation-summary', summaryFilterKey],
     queryFn: () => getReconciliationSummary(filters),
-    enabled: !rangeError,
+    enabled: !appliedRangeError,
     placeholderData: (previousData) => previousData,
+    refetchOnWindowFocus: false,
+    staleTime: 60_000,
   });
+  const isApplyingFilters =
+    filterApplyKey === filterKey &&
+    (listQuery.isFetching || summaryQuery.isFetching) &&
+    Math.max(
+      listQuery.dataUpdatedAt,
+      listQuery.errorUpdatedAt,
+      summaryQuery.dataUpdatedAt,
+      summaryQuery.errorUpdatedAt,
+    ) < filterApplyStartedAt;
   const detailQuery = useQuery({
     queryKey: ['reconciliation-detail', selected?.provider, selected?.payment_id],
     queryFn: () => getReconciliationDetail(selected!.provider, selected!.payment_id),
@@ -127,6 +150,16 @@ export function ReconciliationScreen() {
   });
   const setFilter = (key: keyof ReconciliationFilters, value: string | number) =>
     setFilters((current) => ({ ...current, [key]: value, offset: key === 'offset' ? Number(value) : 0 }));
+  const setDraftFilter = (key: keyof ReconciliationFilters, value: string | number) =>
+    setFilterDraft((current) => ({ ...current, [key]: value, offset: 0 }));
+  const applyFilters = () => {
+    if (rangeError) return;
+    const nextFilters = { ...filterDraft, external_reference: filters.external_reference, offset: 0 };
+    setFilterApplyStartedAt(Date.now());
+    setFilterApplyKey(JSON.stringify(nextFilters));
+    setFilters(nextFilters);
+    if (!desktop) setFiltersVisible(false);
+  };
 
   const rowBackground = (status: ReconciliationStatus) => {
     if (status === 'matched') return isDark ? colors.successSoft : '#B9E4CB';
@@ -179,6 +212,7 @@ export function ReconciliationScreen() {
         </View>
       ) : null}
 
+      <FilterLoadingNotice visible={isApplyingFilters && (listQuery.isFetching || summaryQuery.isFetching)} />
       <View style={[styles.workspace, filtersSidebar && styles.workspaceDesktop]}>
       {desktop || filtersVisible ? (
         <Card
@@ -192,21 +226,24 @@ export function ReconciliationScreen() {
           }}
           title="Filtros">
           <View style={styles.filterGrid}>
-            <View style={styles.filterItem}><DatePickerField label="Desde" value={filters.from} onChange={(value) => setFilter('from', value)} /></View>
-            <View style={styles.filterItem}><DatePickerField label="Hasta" value={filters.to} onChange={(value) => setFilter('to', value)} /></View>
-            <View style={styles.filterItem}><AmountField label="Importe mínimo" value={filters.min_amount || ''} placeholder="Ej.: 10.000" onChangeText={(value) => setFilter('min_amount', value)} /></View>
-            <View style={styles.filterItem}><AmountField label="Importe máximo" value={filters.max_amount || ''} placeholder="Ej.: 124.500,50" onChangeText={(value) => setFilter('max_amount', value)} /></View>
-            <View style={styles.filterItem}><SelectField label="Proveedor" value={filters.provider ?? ''} options={providerOptions} onChange={(value) => setFilter('provider', value)} /></View>
-            <View style={styles.filterItem}><SelectField label="Estado" value={filters.reconciliation_status ?? ''} options={statusOptions} onChange={(value) => setFilter('reconciliation_status', value)} /></View>
+            <View style={styles.filterItem}><DatePickerField label="Desde" value={filterDraft.from} onChange={(value) => setDraftFilter('from', value)} /></View>
+            <View style={styles.filterItem}><DatePickerField label="Hasta" value={filterDraft.to} onChange={(value) => setDraftFilter('to', value)} /></View>
+            <View style={styles.filterItem}><AmountField label="Importe mínimo" value={filterDraft.min_amount || ''} placeholder="Ej.: 10.000" onChangeText={(value) => setDraftFilter('min_amount', value)} /></View>
+            <View style={styles.filterItem}><AmountField label="Importe máximo" value={filterDraft.max_amount || ''} placeholder="Ej.: 124.500,50" onChangeText={(value) => setDraftFilter('max_amount', value)} /></View>
+            <View style={styles.filterItem}><SelectField label="Proveedor" value={filterDraft.provider ?? ''} options={providerOptions} onChange={(value) => setDraftFilter('provider', value)} /></View>
+            <View style={styles.filterItem}><SelectField label="Estado" value={filterDraft.reconciliation_status ?? ''} options={statusOptions} onChange={(value) => setDraftFilter('reconciliation_status', value)} /></View>
           </View>
           <Text style={[styles.hint, { color: rangeError ? colors.danger : colors.textMuted }]}>
             {rangeError || 'Seleccioná un rango y estado para acotar los resultados.'}
           </Text>
+          <Button disabled={Boolean(rangeError)} loading={isApplyingFilters && (listQuery.isFetching || summaryQuery.isFetching)} onPress={applyFilters}>
+            Aplicar filtros
+          </Button>
         </Card>
       ) : null}
 
       <View style={[styles.mainContent, filtersSidebar && styles.mainContentDesktop]}>
-      {listQuery.isPending && !listQuery.data ? <FeedbackState title="Cargando conciliación" description="Comparando fixtures de pagos y ventas." /> : null}
+      {listQuery.isPending && !listQuery.data && !isApplyingFilters ? <FeedbackState title="Cargando conciliación" description="Comparando fixtures de pagos y ventas." /> : null}
       {listQuery.isError ? <FeedbackState title="No se pudo cargar la conciliación" description="Verificá que el backend aislado esté activo." actionLabel="Reintentar" onAction={() => listQuery.refetch()} /> : null}
       {listQuery.data ? (
         <Card style={{ ...styles.sectionCard, borderColor: colors.accent }} title="Resultados">
@@ -235,8 +272,9 @@ export function ReconciliationScreen() {
                 ]}>
                 <Text style={[styles.metricLabel, { color: colors.textMuted }]}>{label}</Text>
                 <Text
-                  numberOfLines={1}
                   adjustsFontSizeToFit
+                  minimumFontScale={0.55}
+                  numberOfLines={1}
                   style={[styles.metricValue, { color: colors.text }]}>
                   {value}
                 </Text>
@@ -255,19 +293,31 @@ export function ReconciliationScreen() {
                 </Text>
                 <View style={styles.totalLine}>
                   <Text style={[styles.totalLabel, { color: colors.textMuted }]}>Cobrado</Text>
-                  <Text style={[styles.totalValue, { color: colors.text }]}>
+                  <Text
+                    adjustsFontSizeToFit
+                    minimumFontScale={0.55}
+                    numberOfLines={1}
+                    style={[styles.totalValue, { color: colors.text }]}>
                     {money(summaryQuery.data.total_payment_amount)}
                   </Text>
                 </View>
                 <View style={styles.totalLine}>
                   <Text style={[styles.totalLabel, { color: colors.textMuted }]}>En base</Text>
-                  <Text style={[styles.totalValue, { color: colors.text }]}>
+                  <Text
+                    adjustsFontSizeToFit
+                    minimumFontScale={0.55}
+                    numberOfLines={1}
+                    style={[styles.totalValue, { color: colors.text }]}>
                     {money(summaryQuery.data.total_sale_amount)}
                   </Text>
                 </View>
                 <View style={styles.totalLine}>
                   <Text style={[styles.totalLabel, { color: colors.danger }]}>Observado</Text>
-                  <Text style={[styles.totalValue, { color: colors.danger }]}>
+                  <Text
+                    adjustsFontSizeToFit
+                    minimumFontScale={0.55}
+                    numberOfLines={1}
+                    style={[styles.totalValue, { color: colors.danger }]}>
                     {money(summaryQuery.data.total_difference)}
                   </Text>
                 </View>
@@ -342,13 +392,21 @@ export function ReconciliationScreen() {
             />
           )}
           <View style={styles.pagination}>
-            <Button disabled={filters.offset === 0} variant="secondary" onPress={() => setFilter('offset', Math.max(0, filters.offset - PAGE_SIZE))}>Anterior</Button>
-            <Text style={[styles.muted, { color: colors.textMuted }]}>
-              {listQuery.data.total
-                ? `${filters.offset + 1}–${Math.min(filters.offset + PAGE_SIZE, listQuery.data.total)} de ${listQuery.data.total}`
-                : '0–0 de 0'}
-            </Text>
-            <Button disabled={!listQuery.data.hasMore} variant="secondary" onPress={() => setFilter('offset', filters.offset + PAGE_SIZE)}>Siguiente</Button>
+            <Button disabled={filters.offset === 0} style={styles.paginationButton} variant="secondary" onPress={() => setFilter('offset', Math.max(0, filters.offset - PAGE_SIZE))}>Anterior</Button>
+            <View style={styles.paginationStatus}>
+              <Text numberOfLines={1} style={[styles.paginationPage, { color: colors.text }]}>{paginationPageLabel({ offset: filters.offset, pageSize: PAGE_SIZE })}</Text>
+              <Text adjustsFontSizeToFit minimumFontScale={0.72} numberOfLines={1} style={[styles.paginationRange, { color: colors.textMuted }]}>
+                {paginationLabel({
+                  hasMore: listQuery.data.hasMore,
+                  itemCount: listQuery.data.items.length,
+                  offset: filters.offset,
+                  pageSize: PAGE_SIZE,
+                  total: listQuery.data.total,
+                  totalExact: listQuery.data.totalExact,
+                })}
+              </Text>
+            </View>
+            <Button disabled={!listQuery.data.hasMore} style={styles.paginationButton} variant="secondary" onPress={() => setFilter('offset', filters.offset + PAGE_SIZE)}>Siguiente</Button>
           </View>
         </Card>
       ) : null}
@@ -535,7 +593,11 @@ const styles = StyleSheet.create({
   resultCard: { padding: spacing.md },
   resultAmount: { fontSize: 18, fontWeight: '700' },
   rowBetween: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.md },
-  pagination: { marginTop: spacing.sm, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.md },
+  pagination: { marginTop: spacing.sm, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.xs },
+  paginationButton: { width: 96, flexShrink: 0 },
+  paginationStatus: { flex: 1, minWidth: 0, alignItems: 'center' },
+  paginationPage: { fontSize: 13, fontWeight: '700' },
+  paginationRange: { width: '100%', textAlign: 'center', fontSize: 12 },
   modalOverlay: { flex: 1, padding: spacing.lg, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(0, 0, 0, 0.55)' },
   differencesModal: { width: '100%', maxWidth: 900, padding: spacing.lg, borderRadius: radii.lg, gap: spacing.lg },
   modalHeader: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: spacing.md },

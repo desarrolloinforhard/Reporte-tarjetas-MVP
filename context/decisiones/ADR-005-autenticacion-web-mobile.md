@@ -53,6 +53,13 @@ El contrato debe incluir expiración, roles, permisos y alcance autorizado por
 cliente/sucursal, sin confiar en identificadores enviados solamente por el
 frontend.
 
+Para el MVP se acordo una sola identidad funcional: el propietario de la
+empresa. Esta cuenta tiene acceso integral de consulta a todas las sucursales y
+capacidades que presenta el escritorio original a la administracion. No se
+implementa una jerarquia de roles parciales que el caso de uso actual no
+necesita. La estructura del backend puede conservar permisos aditivos para una
+ampliacion futura.
+
 ## Transición
 
 1. Mantener el comportamiento local actual únicamente en desarrollo aislado.
@@ -81,6 +88,11 @@ frontend.
 - Los usuarios, permisos y sesiones actuales son exclusivamente sintéticos.
 - El almacenamiento en memoria es deliberado para desarrollo y se reemplazará
   por persistencia revocable antes de staging.
+- La sesion nativa del propietario debe restaurarse al abrir la aplicacion y
+  permanecer activa hasta cierre explicito, expiracion o revocacion. El refresh
+  token se conserva en SecureStore; nunca se persiste la contrasena.
+- Un bloqueo local opcional por PIN o biometria puede proteger la reapertura sin
+  reemplazar la autenticacion del servidor.
 
 ## Integración con credenciales administrativas en desarrollo
 

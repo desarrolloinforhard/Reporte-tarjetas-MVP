@@ -41,4 +41,42 @@ describe('contratos de conciliación', () => {
         summary.pending_review_count,
     ).toBe(summary.total_payments);
   });
+
+  it('mantiene visibles las metricas con el resumen del backend operativo anterior', () => {
+    const summary = reconciliationSummarySchema.parse({
+      total_payments: 269,
+      matched_count: 263,
+      sale_not_found_count: 4,
+      amount_mismatch_count: 2,
+      pending_review_count: 0,
+      total_difference: 1250,
+      total_exact: true,
+      reconciliation_mode: 'legacy',
+      by_provider: {},
+      by_branch: {},
+    });
+
+    expect(summary.total_payments).toBe(269);
+    expect(summary.total_payment_amount).toBe(0);
+    expect(summary.total_sale_amount).toBe(0);
+    expect(summary.amount_mismatch_amount).toBe(0);
+  });
+
+  it('normaliza los nombres historicos del desglose monetario', () => {
+    const summary = reconciliationSummarySchema.parse({
+      total_payments: 3,
+      matched_count: 1,
+      sale_not_found_count: 1,
+      amount_mismatch_count: 1,
+      pending_review_count: 0,
+      total_difference: 350,
+      amount_mismatch_difference_total: 200,
+      sale_not_found_amount_total: 150,
+      real_difference_total: 200,
+    });
+
+    expect(summary.amount_mismatch_amount).toBe(200);
+    expect(summary.sale_not_found_amount).toBe(150);
+    expect(summary.real_difference_amount).toBe(200);
+  });
 });

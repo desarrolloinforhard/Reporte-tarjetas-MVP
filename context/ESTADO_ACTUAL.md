@@ -40,7 +40,35 @@
 - La revisión Android contra la API operativa confirmó que dos intentos visibles
   sin importe desaparecen al aplicar un rango que debería incluirlos. La API
   local con fixtures no fue la fuente de esas filas reales.
-- Frontend validado con lint, typecheck, 14 suites/39 tests y export web.
+- Conciliacion fue validada manualmente en Android contra el proyecto original:
+  listado, cantidades y totales entregan los mismos resultados para el periodo
+  comprobado. El frontend tolera tanto el resumen operativo anterior como el
+  contrato ampliado del backend aislado.
+- Las cards de importes en Inicio, Pagos, detalle, Liquidaciones, Conciliacion y
+  Calidad mantienen una sola linea y reducen la tipografia cuando el valor no
+  entra en el ancho disponible.
+- Calidad de datos ya no presenta resultados del filtro anterior mientras carga
+  un rango nuevo. Si una categoria operativa vence por timeout, muestra un
+  analisis parcial y conserva solamente las categorias del periodo que si
+  respondieron. El paginador movil usa texto Unicode valido y una distribucion
+  que no se corta en pantallas angostas.
+- Pagos, Liquidaciones, Conciliacion y Calidad separan filtros en edicion de
+  filtros aplicados. Fechas, importes y selectores consultan una sola vez al
+  pulsar `Aplicar filtros`; el aviso de carga aparece solo para esa accion y no
+  durante refrescos automaticos.
+- Las consultas filtradas no se repiten al recuperar el foco y reutilizan por un
+  minuto las respuestas recientes. Calidad busca referencias localmente y
+  limita a 12 segundos la categoria operativa de pagos sin venta; si vence,
+  presenta un analisis parcial en lugar de bloquear toda la pantalla.
+- La paginacion distingue totales exactos de ventanas operativas aproximadas:
+  mientras el backend informa que hay mas filas muestra pagina/rango y `hay mas`,
+  sin presentar `offset + filas + 1` como cantidad total. Los resúmenes ya no se
+  vuelven a consultar al avanzar o retroceder de pagina.
+- Liquidaciones operativas deriva datos desde un maximo de 2000 pagos. Al llegar
+  a ese limite el MVP muestra `2000+` y avisa que conteos e importes son minimos
+  parciales del periodo; obtener el total real requiere ampliar el contrato del
+  backend de Liquidaciones o incorporar la fuente real de acreditaciones.
+- Frontend validado con lint, typecheck, 15 suites/48 tests y export web.
 - Backend aislado validado con tests y controles de sintaxis, incluida la
   regresión sanitizada de ventana previa al filtro monetario.
 - Backend publicado en `develop`: `5c4e057`.
@@ -162,6 +190,15 @@ oficiales del SDK.
 - `GET /api/v1/users/me` requiere autenticación y deriva la identidad de la sesión.
 - El login del panel administrativo no es apto para la aplicación web/móvil.
 - La autenticación implementada sigue limitada al modo fixture de desarrollo.
+
+- El alcance funcional acordado es una unica cuenta de propietario con acceso
+  integral de consulta, equivalente a las capacidades visibles para la
+  administracion en el escritorio original. No se requiere una matriz compleja
+  de roles para el MVP.
+- La sesion nativa objetivo es persistente y revocable, con refresh token en
+  SecureStore y bloqueo local opcional por PIN o biometria. Las acciones de
+  escritura, si se incorporan en otra fase, requieren autorizacion y auditoria
+  separadas.
 
 ## Fuente del backend
 

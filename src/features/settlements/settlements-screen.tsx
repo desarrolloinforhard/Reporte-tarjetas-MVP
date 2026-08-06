@@ -9,6 +9,7 @@ import { Card } from '@/components/ui/card';
 import { DatePickerField } from '@/components/ui/date-picker-field';
 import { ExportDialog } from '@/components/ui/export-dialog';
 import { FeedbackState } from '@/components/ui/feedback-state';
+import { FilterLoadingNotice } from '@/components/ui/filter-loading-notice';
 import { SelectField } from '@/components/ui/select-field';
 import { TextField } from '@/components/ui/text-field';
 import { ScreenFrame } from '@/components/layout/screen-frame';
@@ -23,6 +24,7 @@ import { breakpoints, radii, spacing } from '@/theme/tokens';
 import { useAppTheme } from '@/theme/theme-provider';
 import { formatDate } from '@/utils/date-format';
 import { exportCsv } from '@/utils/file-export';
+import { paginationLabel, paginationPageLabel } from '@/utils/pagination';
 
 const PAGE_SIZE = 20;
 const providers: Record<string, string> = {
@@ -136,6 +138,9 @@ export function SettlementsScreen() {
     limit: PAGE_SIZE,
     offset: 0,
   });
+  const [filterDraft, setFilterDraft] = useState<SettlementFilters>(filters);
+  const [filterApplyStartedAt, setFilterApplyStartedAt] = useState(0);
+  const [filterApplyKey, setFilterApplyKey] = useState('');
   useEffect(() => {
     const timeout = setTimeout(() => {
       setFilters((current) => {
@@ -146,28 +151,59 @@ export function SettlementsScreen() {
     return () => clearTimeout(timeout);
   }, [referenceDraft]);
   const filterKey = useMemo(() => JSON.stringify(filters), [filters]);
+  const summaryFilterKey = useMemo(
+    () => JSON.stringify({ ...filters, limit: undefined, offset: undefined }),
+    [filters],
+  );
   const rangeError = useMemo(
+    () => validateRange(filterDraft.from, filterDraft.to),
+    [filterDraft.from, filterDraft.to],
+  );
+  const appliedRangeError = useMemo(
     () => validateRange(filters.from, filters.to),
     [filters.from, filters.to],
   );
   const listQuery = useQuery({
     queryKey: ['settlements', filterKey],
     queryFn: () => getSettlements(filters),
-    enabled: !rangeError,
+    enabled: !appliedRangeError,
     placeholderData: (previousData) => previousData,
+    refetchOnWindowFocus: false,
+    staleTime: 60_000,
   });
   const summaryQuery = useQuery({
-    queryKey: ['settlements-summary', filterKey],
+    queryKey: ['settlements-summary', summaryFilterKey],
     queryFn: () => getSettlementsSummary(filters),
-    enabled: !rangeError,
+    enabled: !appliedRangeError,
     placeholderData: (previousData) => previousData,
+    refetchOnWindowFocus: false,
+    staleTime: 60_000,
   });
+  const isApplyingFilters =
+    filterApplyKey === filterKey &&
+    (listQuery.isFetching || summaryQuery.isFetching) &&
+    Math.max(
+      listQuery.dataUpdatedAt,
+      listQuery.errorUpdatedAt,
+      summaryQuery.dataUpdatedAt,
+      summaryQuery.errorUpdatedAt,
+    ) < filterApplyStartedAt;
   const setFilter = (key: keyof SettlementFilters, value: string | number) =>
     setFilters((current) => ({
       ...current,
       [key]: value,
       offset: key === 'offset' ? Number(value) : 0,
     }));
+  const setDraftFilter = (key: keyof SettlementFilters, value: string | number) =>
+    setFilterDraft((current) => ({ ...current, [key]: value, offset: 0 }));
+  const applyFilters = () => {
+    if (rangeError) return;
+    const nextFilters = { ...filterDraft, external_reference: filters.external_reference, offset: 0 };
+    setFilterApplyStartedAt(Date.now());
+    setFilterApplyKey(JSON.stringify(nextFilters));
+    setFilters(nextFilters);
+    if (!desktop) setFiltersVisible(false);
+  };
   async function handleExport() {
     const rows = await getAllSettlements(filters);
     if (!rows.length) throw new Error('No hay liquidaciones para exportar.');
@@ -190,7 +226,13 @@ export function SettlementsScreen() {
   const summary = summaryQuery.data;
   const metrics = summary
     ? [
-        ['Liquidaciones', String(summary.settlements_count), 'neutral'],
+        [
+          'Liquidaciones',
+          summary.estimated && summary.settlements_count >= 2000
+            ? `${summary.settlements_count}+`
+            : String(summary.settlements_count),
+          'neutral',
+        ],
         ['Bruto', money(summary.gross_amount), 'success'],
         ['Comisiones', money(summary.fee_amount), 'warning'],
         ['Neto', money(summary.net_amount), 'success'],
@@ -214,6 +256,7 @@ export function SettlementsScreen() {
         </View>
       ) : null}
 
+      <FilterLoadingNotice visible={isApplyingFilters && (listQuery.isFetching || summaryQuery.isFetching)} />
       <View style={[styles.workspace, filtersSidebar && styles.workspaceDesktop]}>
       {desktop || filtersVisible ? (
         <Card
@@ -230,47 +273,47 @@ export function SettlementsScreen() {
             <View style={styles.filterItem}>
               <DatePickerField
                 label="Desde"
-                onChange={(value) => setFilter('from', value)}
-                value={filters.from}
+                onChange={(value) => setDraftFilter('from', value)}
+                value={filterDraft.from}
               />
             </View>
             <View style={styles.filterItem}>
               <DatePickerField
                 label="Hasta"
-                onChange={(value) => setFilter('to', value)}
-                value={filters.to}
+                onChange={(value) => setDraftFilter('to', value)}
+                value={filterDraft.to}
               />
             </View>
             <View style={styles.filterItem}>
               <AmountField
                 label="Importe mínimo"
-                onChangeText={(value) => setFilter('min_amount', value)}
+                onChangeText={(value) => setDraftFilter('min_amount', value)}
                 placeholder="Ej.: 10.000"
-                value={filters.min_amount || ''}
+                value={filterDraft.min_amount || ''}
               />
             </View>
             <View style={styles.filterItem}>
               <AmountField
                 label="Importe máximo"
-                onChangeText={(value) => setFilter('max_amount', value)}
+                onChangeText={(value) => setDraftFilter('max_amount', value)}
                 placeholder="Ej.: 124.500,50"
-                value={filters.max_amount || ''}
+                value={filterDraft.max_amount || ''}
               />
             </View>
             <View style={styles.filterItem}>
               <SelectField
                 label="Proveedor"
-                onChange={(value) => setFilter('provider', value)}
+                onChange={(value) => setDraftFilter('provider', value)}
                 options={providerOptions}
-                value={filters.provider ?? ''}
+                value={filterDraft.provider ?? ''}
               />
             </View>
             <View style={styles.filterItem}>
               <SelectField
                 label="Estado"
-                onChange={(value) => setFilter('status', value)}
+                onChange={(value) => setDraftFilter('status', value)}
                 options={statuses}
-                value={filters.status ?? ''}
+                value={filterDraft.status ?? ''}
               />
             </View>
           </View>
@@ -282,11 +325,14 @@ export function SettlementsScreen() {
             ]}>
             {rangeError || 'Rango máximo de consulta: 61 días.'}
           </Text>
+          <Button disabled={Boolean(rangeError)} loading={isApplyingFilters && (listQuery.isFetching || summaryQuery.isFetching)} onPress={applyFilters}>
+            Aplicar filtros
+          </Button>
         </Card>
       ) : null}
 
       <View style={[styles.mainContent, filtersSidebar && styles.mainContentDesktop]}>
-      {listQuery.isPending && !listQuery.data ? (
+      {listQuery.isPending && !listQuery.data && !isApplyingFilters ? (
         <FeedbackState description="Consultando fixtures sin acceso a ODBC." title="Cargando liquidaciones" />
       ) : null}
       {listQuery.isError ? (
@@ -318,10 +364,22 @@ export function SettlementsScreen() {
                   },
                 ]}>
                 <Text style={[styles.metricLabel, { color: colors.textMuted }]}>{label}</Text>
-                <Text style={[styles.metricValue, { color: colors.text }]}>{value}</Text>
+                <Text
+                  adjustsFontSizeToFit
+                  minimumFontScale={0.55}
+                  numberOfLines={1}
+                  style={[styles.metricValue, { color: colors.text }]}>
+                  {value}
+                </Text>
               </View>
             ))}
           </View>
+          {summary?.estimated && summary.settlements_count >= 2000 ? (
+            <Text style={[styles.filterHint, { color: colors.warning }]}>
+              El servidor operativo alcanzó su límite de 2000 registros. El conteo y los importes
+              mostrados son un mínimo del período, no un total exacto.
+            </Text>
+          ) : null}
           <View style={styles.resultsSearch}>
             <View style={styles.resultsSearchField}>
               <TextField
@@ -405,11 +463,21 @@ export function SettlementsScreen() {
             </View>
           )}
           <View style={styles.pagination}>
-            <Button disabled={filters.offset === 0} onPress={() => setFilter('offset', Math.max(0, filters.offset - PAGE_SIZE))} variant="secondary">Anterior</Button>
-            <Text style={[styles.muted, { color: colors.textMuted }]}>
-              {filters.offset + 1}–{Math.min(filters.offset + PAGE_SIZE, listQuery.data.total)} de {listQuery.data.total}
-            </Text>
-            <Button disabled={!listQuery.data.hasMore} onPress={() => setFilter('offset', filters.offset + PAGE_SIZE)} variant="secondary">Siguiente</Button>
+            <Button disabled={filters.offset === 0} onPress={() => setFilter('offset', Math.max(0, filters.offset - PAGE_SIZE))} style={styles.paginationButton} variant="secondary">Anterior</Button>
+            <View style={styles.paginationStatus}>
+              <Text numberOfLines={1} style={[styles.paginationPage, { color: colors.text }]}>{paginationPageLabel({ offset: filters.offset, pageSize: PAGE_SIZE })}</Text>
+              <Text adjustsFontSizeToFit minimumFontScale={0.72} numberOfLines={1} style={[styles.paginationRange, { color: colors.textMuted }]}>
+                {paginationLabel({
+                  hasMore: listQuery.data.hasMore,
+                  itemCount: listQuery.data.items.length,
+                  offset: filters.offset,
+                  pageSize: PAGE_SIZE,
+                  total: listQuery.data.total,
+                  totalExact: listQuery.data.totalExact,
+                })}
+              </Text>
+            </View>
+            <Button disabled={!listQuery.data.hasMore} onPress={() => setFilter('offset', filters.offset + PAGE_SIZE)} style={styles.paginationButton} variant="secondary">Siguiente</Button>
           </View>
         </Card>
       ) : null}
@@ -548,7 +616,11 @@ const styles = StyleSheet.create({
   itemCard: { padding: spacing.md },
   itemAmount: { fontSize: 18, fontWeight: '700' },
   rowBetween: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.md },
-  pagination: { marginTop: spacing.sm, flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: spacing.md },
+  pagination: { marginTop: spacing.sm, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.xs },
+  paginationButton: { width: 96, flexShrink: 0 },
+  paginationStatus: { flex: 1, minWidth: 0, alignItems: 'center' },
+  paginationPage: { fontSize: 13, fontWeight: '700' },
+  paginationRange: { width: '100%', textAlign: 'center', fontSize: 12 },
   backdrop: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: spacing.md },
   detailModal: { width: '100%', maxWidth: 720, maxHeight: '88%', borderTopWidth: 6, borderRadius: radii.xl, padding: spacing.md, gap: spacing.md, overflow: 'hidden' },
   detailHeader: { borderRadius: radii.lg, padding: spacing.md, flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: spacing.md },

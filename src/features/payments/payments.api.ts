@@ -256,6 +256,9 @@ export async function getPayments(filters: PaymentFilters) {
     items: result.data,
     total: Number(result.meta.total || 0),
     hasMore: Boolean(result.meta.has_more),
+    totalExact:
+      result.meta.total_exact === true ||
+      (result.meta.total_exact === undefined && !result.meta.has_more),
   };
 }
 

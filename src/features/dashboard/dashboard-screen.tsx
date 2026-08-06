@@ -146,16 +146,22 @@ export function DashboardScreen() {
   const dashboardQuery = useQuery({
     queryKey: ['dashboard', range.from, range.to],
     queryFn: () => getDashboardData(range.from, range.to),
+    refetchOnWindowFocus: false,
+    staleTime: 60_000,
   });
   const previousMonthQuery = useQuery({
     queryKey: ['dashboard-comparison', previousRange.from, previousRange.to],
     queryFn: () => getDashboardData(previousRange.from, previousRange.to),
     enabled: period === 'month',
+    refetchOnWindowFocus: false,
+    staleTime: 60_000,
   });
   const dailyQuery = useQuery({
     queryKey: ['dashboard-daily-comparison', range.from, range.to],
     queryFn: () => getDailyPayments(iso(addDays(new Date(`${range.from}T12:00:00`), -1)), range.to),
     enabled: period === 'week',
+    refetchOnWindowFocus: false,
+    staleTime: 60_000,
   });
 
   const summary = dashboardQuery.data?.summary;
@@ -331,6 +337,9 @@ export function DashboardScreen() {
                     {metric.action ? ' ›' : ''}
                   </Text>
                   <Text
+                    adjustsFontSizeToFit
+                    minimumFontScale={0.55}
+                    numberOfLines={1}
                     style={[
                       styles.metricValue,
                       {
@@ -507,7 +516,13 @@ function ComparisonValue({
   return (
     <View style={[styles.comparisonValue, { borderColor: colors.border }]}>
       <Text style={[styles.comparisonLabel, { color: colors.textMuted }]}>{label}</Text>
-      <Text style={[styles.comparisonNumber, { color: color || colors.text }]}>{value}</Text>
+      <Text
+        adjustsFontSizeToFit
+        minimumFontScale={0.55}
+        numberOfLines={1}
+        style={[styles.comparisonNumber, { color: color || colors.text }]}>
+        {value}
+      </Text>
     </View>
   );
 }

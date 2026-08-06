@@ -190,6 +190,9 @@ export function PaymentDetailModal({
                     ]}>
                     <Text style={[styles.eyebrow, { color: colors.textMuted }]}>{label}</Text>
                     <Text
+                      adjustsFontSizeToFit
+                      minimumFontScale={0.55}
+                      numberOfLines={1}
                       style={[
                         styles.metricValue,
                         {

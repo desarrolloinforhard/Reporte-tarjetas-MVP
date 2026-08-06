@@ -27,6 +27,10 @@ Este archivo coordina necesidades del frontend universal. La implementación ocu
 | BE-015 | Detectar duplicados automáticos solo por proveedor e ID externo exacto | disponible_desarrollo | Nicolás/Misael | Evita falsos positivos |
 | BE-016 | Validar filtros, paginación y relaciones en staging/réplica autorizada | pendiente | Nicolás/Misael | Sin producción |
 
+La autorizacion objetivo del MVP es una cuenta propietaria con consulta integral
+de todas las sucursales. `BE-005` no requiere una matriz compleja de roles en la
+primera version; debe conservar permisos aditivos para futuras ampliaciones.
+
 ## Plantilla de tarea
 
 ```md
@@ -108,3 +112,6 @@ sesión. Web utiliza una cookie opaca HttpOnly y native utiliza access/refresh
 tokens opacos. Expo protege las rutas y almacena el refresh nativo con
 SecureStore. Falta validar la development build Android y reemplazar el
 almacenamiento volátil antes de staging.
+- [ ] Liquidaciones: eliminar o paginar de forma exhaustiva el limite interno de
+  2000 pagos, exponer `total_exact`/`source_truncated` y calcular resumen e
+  importes sobre todo el rango antes de considerar esos totales definitivos.

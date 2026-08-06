@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Modal, Platform, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 
 import { ScreenFrame } from '@/components/layout/screen-frame';
@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { DatePickerField } from '@/components/ui/date-picker-field';
 import { FeedbackState } from '@/components/ui/feedback-state';
+import { FilterLoadingNotice } from '@/components/ui/filter-loading-notice';
 import { SelectField } from '@/components/ui/select-field';
 import { TextField } from '@/components/ui/text-field';
 import { getDataQuality, getQualityPaymentDetail, QualityCategory, QualityFinding, QualityFilters } from '@/features/data-quality/data-quality.api';
@@ -16,6 +17,7 @@ import { PaymentDetailModal } from '@/features/payments/payment-detail-modal';
 import { breakpoints, radii, spacing } from '@/theme/tokens';
 import { useAppTheme } from '@/theme/theme-provider';
 import { formatDate, formatDateTime } from '@/utils/date-format';
+import { paginationPageLabel } from '@/utils/pagination';
 
 const tabs: { key: QualityCategory; label: string }[] = [
   { key: 'duplicates', label: 'Duplicados' },
@@ -57,35 +59,45 @@ export function DataQualityScreen() {
     min_amount: '',
     max_amount: '',
   });
-  useEffect(() => {
-    const timeout = setTimeout(() => {
-      setPageOffset(0);
-      setFilters((current) => {
-        if ((current.external_reference || '') === referenceDraft) return current;
-        return { ...current, external_reference: referenceDraft };
-      });
-    }, 650);
-    return () => clearTimeout(timeout);
-  }, [referenceDraft]);
-  const rangeError = filters.from > filters.to;
+  const [filterDraft, setFilterDraft] = useState<QualityFilters>(filters);
+  const [filterApplyStartedAt, setFilterApplyStartedAt] = useState(0);
+  const [filterApplyKey, setFilterApplyKey] = useState('');
+  const rangeError = filterDraft.from > filterDraft.to;
   const queryKey = useMemo(() => JSON.stringify(filters), [filters]);
   const qualityQuery = useQuery({
     queryKey: ['data-quality', queryKey],
     queryFn: () => getDataQuality(filters),
-    enabled: !rangeError,
-    placeholderData: (previousData) => previousData,
+    refetchOnWindowFocus: false,
+    staleTime: 60_000,
   });
+  const isApplyingFilters =
+    filterApplyKey === queryKey &&
+    qualityQuery.isFetching &&
+    Math.max(qualityQuery.dataUpdatedAt, qualityQuery.errorUpdatedAt) < filterApplyStartedAt;
   const detailQuery = useQuery({
     queryKey: ['quality-detail', selected?.provider, selected?.payment_id],
     queryFn: () => getQualityPaymentDetail(selected!.provider, selected!.payment_id),
     enabled: Boolean(selected),
   });
-  const rows = qualityQuery.data?.[activeTab] || [];
+  const normalizedReference = referenceDraft.trim().toLowerCase();
+  const rows = (qualityQuery.data?.[activeTab] || []).filter((row) =>
+    !normalizedReference || row.external_reference.toLowerCase().includes(normalizedReference),
+  );
   const pageRows = rows.slice(pageOffset, pageOffset + PAGE_SIZE);
   const summary = qualityQuery.data?.summary;
-  const setFilter = (key: keyof QualityFilters, value: string) => {
+  const activeCategoryUnavailable = Boolean(
+    qualityQuery.data?.unavailableCategories.includes(activeTab),
+  );
+  const setDraftFilter = (key: keyof QualityFilters, value: string) =>
+    setFilterDraft((current) => ({ ...current, [key]: value }));
+  const applyFilters = () => {
+    if (rangeError) return;
+    const nextFilters = { ...filterDraft, external_reference: '' };
     setPageOffset(0);
-    setFilters((current) => ({ ...current, [key]: value }));
+    setFilterApplyStartedAt(Date.now());
+    setFilterApplyKey(JSON.stringify(nextFilters));
+    setFilters(nextFilters);
+    if (!desktop) setFiltersVisible(false);
   };
   const rowColor = (row: QualityFinding) =>
     row.category === 'orphans' && row.reason === 'sale_not_found'
@@ -104,6 +116,7 @@ export function DataQualityScreen() {
           <Button variant="secondary" onPress={() => setFiltersVisible((value) => !value)}>{filtersVisible ? 'Ocultar filtros' : 'Mostrar filtros'}</Button>
         </View>
       ) : null}
+      <FilterLoadingNotice visible={isApplyingFilters && qualityQuery.isFetching} />
       <View style={[styles.workspace, filtersSidebar && styles.workspaceDesktop]}>
       {desktop || filtersVisible ? (
         <Card
@@ -117,22 +130,35 @@ export function DataQualityScreen() {
             borderColor: filtersSidebar ? colors.border : colors.accent,
           }}>
           <View style={styles.filters}>
-            <View style={styles.filter}><DatePickerField label="Desde" value={filters.from} onChange={(value) => setFilter('from', value)} /></View>
-            <View style={styles.filter}><DatePickerField label="Hasta" value={filters.to} onChange={(value) => setFilter('to', value)} /></View>
-            <View style={styles.filter}><AmountField label="Importe mínimo" value={filters.min_amount || ''} placeholder="Ej.: 10.000" onChangeText={(value) => setFilter('min_amount', value)} /></View>
-            <View style={styles.filter}><AmountField label="Importe máximo" value={filters.max_amount || ''} placeholder="Ej.: 124.500,50" onChangeText={(value) => setFilter('max_amount', value)} /></View>
-            <View style={styles.filter}><SelectField label="Proveedor" value={filters.provider || ''} options={providerOptions} onChange={(value) => setFilter('provider', value)} /></View>
+            <View style={styles.filter}><DatePickerField label="Desde" value={filterDraft.from} onChange={(value) => setDraftFilter('from', value)} /></View>
+            <View style={styles.filter}><DatePickerField label="Hasta" value={filterDraft.to} onChange={(value) => setDraftFilter('to', value)} /></View>
+            <View style={styles.filter}><AmountField label="Importe mínimo" value={filterDraft.min_amount || ''} placeholder="Ej.: 10.000" onChangeText={(value) => setDraftFilter('min_amount', value)} /></View>
+            <View style={styles.filter}><AmountField label="Importe máximo" value={filterDraft.max_amount || ''} placeholder="Ej.: 124.500,50" onChangeText={(value) => setDraftFilter('max_amount', value)} /></View>
+            <View style={styles.filter}><SelectField label="Proveedor" value={filterDraft.provider || ''} options={providerOptions} onChange={(value) => setDraftFilter('provider', value)} /></View>
           </View>
           {rangeError ? <Text style={{ color: colors.danger }}>La fecha Desde no puede ser posterior a Hasta.</Text> : null}
+          <Button disabled={rangeError} loading={isApplyingFilters && qualityQuery.isFetching} onPress={applyFilters}>
+            Aplicar filtros
+          </Button>
         </Card>
       ) : null}
 
       <View style={[styles.mainContent, filtersSidebar && styles.mainContentDesktop]}>
-      {qualityQuery.isPending && !qualityQuery.data ? <FeedbackState title="Analizando calidad de datos" description="Revisando los datos sintéticos del período." /> : null}
+      {qualityQuery.isPending && !qualityQuery.data && !isApplyingFilters ? <FeedbackState title="Analizando calidad de datos" description="Revisando los datos sintéticos del período." /> : null}
       {qualityQuery.isError ? <FeedbackState title="No se pudo completar el análisis" description="Verificá la sesión y el backend aislado." actionLabel="Reintentar" onAction={() => qualityQuery.refetch()} /> : null}
       {qualityQuery.data ? (
         <Card title="Calidad de datos" style={{ ...styles.section, borderColor: colors.accent }}>
           <Text style={[styles.muted, { color: colors.textMuted }]}>Control de duplicados, referencias, ventas asociadas e importes.</Text>
+          {qualityQuery.data.unavailableCategories.length ? (
+            <View style={[styles.partialWarning, { backgroundColor: colors.warningSoft, borderColor: colors.warning }]}>
+              <Text style={{ color: colors.text, fontWeight: '700' }}>Análisis parcial</Text>
+              <Text style={{ color: colors.textMuted }}>
+                No respondieron: {qualityQuery.data.unavailableCategories.map((category) =>
+                  tabs.find((tab) => tab.key === category)?.label || category,
+                ).join(', ')}. Se muestran solamente los datos del período que sí respondieron.
+              </Text>
+            </View>
+          ) : null}
           {summary ? (
             <View style={[styles.metrics, styles.metricsEmbedded, { borderColor: colors.border }]}>
               {[
@@ -143,7 +169,13 @@ export function DataQualityScreen() {
               ].map(([label, value]) => (
                 <View key={String(label)} style={[styles.metric, !desktop && styles.metricMobile, { borderColor: colors.border }]}>
                   <Text style={[styles.metricLabel, { color: colors.textMuted }]}>{label}</Text>
-                  <Text style={[styles.metricValue, { color: colors.text }]}>{value}</Text>
+                  <Text
+                    adjustsFontSizeToFit
+                    minimumFontScale={0.55}
+                    numberOfLines={1}
+                    style={[styles.metricValue, { color: colors.text }]}>
+                    {value}
+                  </Text>
                 </View>
               ))}
             </View>
@@ -165,12 +197,21 @@ export function DataQualityScreen() {
                     }}>
                     {tab.label}
                   </Text>
-                  <Badge label={String(qualityQuery.data[tab.key].length)} tone={qualityQuery.data[tab.key].length ? 'warning' : 'success'} />
+                  <Badge
+                    label={qualityQuery.data.unavailableCategories.includes(tab.key) ? '—' : String(qualityQuery.data[tab.key].length)}
+                    tone={qualityQuery.data.unavailableCategories.includes(tab.key) || qualityQuery.data[tab.key].length ? 'warning' : 'success'}
+                  />
                 </Pressable>
               ))}
             </View>
           </ScrollView>
-          {!rows.length ? <FeedbackState title="Sin hallazgos" description="No se detectaron casos en esta categoría." /> : null}
+          {activeCategoryUnavailable ? (
+            <FeedbackState
+              title="Categoría no disponible"
+              description="El servidor demoró demasiado. No se interpreta como cero ni como ausencia de hallazgos."
+            />
+          ) : null}
+          {!rows.length && !activeCategoryUnavailable ? <FeedbackState title="Sin hallazgos" description="No se detectaron casos en esta categoría." /> : null}
           {desktop && rows.length ? (
             <ScrollView horizontal contentContainerStyle={styles.tableScroll}>
               <View style={styles.table}>
@@ -203,19 +244,26 @@ export function DataQualityScreen() {
             </Pressable>
           ))}</View> : null}
           {rows.length > PAGE_SIZE ? (
-            <View style={styles.rowBetween}>
+            <View style={styles.pagination}>
               <Button
                 disabled={pageOffset === 0}
                 onPress={() => setPageOffset((value) => Math.max(0, value - PAGE_SIZE))}
+                style={styles.paginationButton}
                 variant="secondary">
                 Anterior
               </Button>
-              <Text style={[styles.muted, { color: colors.textMuted }]}>
-                {pageOffset + 1}â€“{Math.min(pageOffset + PAGE_SIZE, rows.length)} de {rows.length}
-              </Text>
+              <View style={styles.paginationStatus}>
+                <Text numberOfLines={1} style={[styles.paginationPage, { color: colors.text }]}>
+                  {paginationPageLabel({ offset: pageOffset, pageSize: PAGE_SIZE })}
+                </Text>
+                <Text adjustsFontSizeToFit minimumFontScale={0.72} numberOfLines={1} style={[styles.paginationText, { color: colors.textMuted }]}>
+                  {pageOffset + 1}{'\u2013'}{Math.min(pageOffset + PAGE_SIZE, rows.length)} de {rows.length}
+                </Text>
+              </View>
               <Button
                 disabled={pageOffset + PAGE_SIZE >= rows.length}
                 onPress={() => setPageOffset((value) => value + PAGE_SIZE)}
+                style={styles.paginationButton}
                 variant="secondary">
                 Siguiente
               </Button>
@@ -391,6 +439,12 @@ const styles = StyleSheet.create({
   metricMobile: { flexGrow: 0, flexBasis: '50%', minHeight: 84 },
   metricLabel: { fontSize: 11, fontWeight: '600' },
   metricValue: { fontSize: 19, fontWeight: '700' },
+  partialWarning: { borderWidth: 1, borderRadius: radii.md, padding: spacing.md, gap: spacing.xs },
+  pagination: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.xs },
+  paginationButton: { width: 96, flexShrink: 0 },
+  paginationStatus: { flex: 1, minWidth: 0, alignItems: 'center' },
+  paginationPage: { fontSize: 13, fontWeight: '700' },
+  paginationText: { width: '100%', textAlign: 'center', fontSize: 12 },
   tabs: { flexDirection: 'row', minWidth: '100%' },
   tab: { minWidth: 180, minHeight: 48, paddingHorizontal: spacing.md, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm, borderBottomWidth: 3, borderBottomColor: 'transparent' },
   tableScroll: { flexGrow: 1 },

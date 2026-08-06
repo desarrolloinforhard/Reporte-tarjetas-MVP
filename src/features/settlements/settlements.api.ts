@@ -82,6 +82,9 @@ export async function getSettlements(filters: SettlementFilters) {
     items: result.data,
     total: Number(result.meta.total || 0),
     hasMore: Boolean(result.meta.has_more),
+    totalExact:
+      result.meta.total_exact === true ||
+      (!result.meta.has_more && Number(result.meta.total || 0) < 2000),
     estimated: Boolean(result.meta.estimated),
   };
 }

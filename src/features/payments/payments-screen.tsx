@@ -20,6 +20,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { ExportDialog } from '@/components/ui/export-dialog';
 import { FeedbackState } from '@/components/ui/feedback-state';
+import { FilterLoadingNotice } from '@/components/ui/filter-loading-notice';
 import { TextField } from '@/components/ui/text-field';
 import {
   getAllPayments,
@@ -35,6 +36,7 @@ import { breakpoints, radii, spacing, typography } from '@/theme/tokens';
 import { useAppTheme } from '@/theme/theme-provider';
 import { formatDate, formatDateTime } from '@/utils/date-format';
 import { exportCsv } from '@/utils/file-export';
+import { paginationLabel, paginationPageLabel } from '@/utils/pagination';
 
 const PAGE_SIZE = 20;
 const providers: Record<string, string> = {
@@ -467,12 +469,13 @@ export function PaymentsScreen() {
     limit: PAGE_SIZE,
     offset: 0,
   });
+  const [filterDraft, setFilterDraft] = useState<PaymentFilters>(filters);
   const [mobileFiltersVisible, setMobileFiltersVisible] = useState(false);
   const [exportVisible, setExportVisible] = useState(false);
   const [selected, setSelected] = useState<Payment | null>(null);
   const [referenceDraft, setReferenceDraft] = useState('');
-  const [minAmountDraft, setMinAmountDraft] = useState('');
-  const [maxAmountDraft, setMaxAmountDraft] = useState('');
+  const [filterApplyStartedAt, setFilterApplyStartedAt] = useState(0);
+  const [filterApplyKey, setFilterApplyKey] = useState('');
   useEffect(() => {
     const timeout = setTimeout(() => {
       setFilters((current) => {
@@ -482,35 +485,24 @@ export function PaymentsScreen() {
     }, 650);
     return () => clearTimeout(timeout);
   }, [referenceDraft]);
-  useEffect(() => {
-    const timeout = setTimeout(() => {
-      setFilters((current) => {
-        if (
-          (current.min_amount || '') === minAmountDraft &&
-          (current.max_amount || '') === maxAmountDraft
-        ) {
-          return current;
-        }
-        return {
-          ...current,
-          min_amount: minAmountDraft,
-          max_amount: maxAmountDraft,
-          offset: 0,
-        };
-      });
-    }, 650);
-    return () => clearTimeout(timeout);
-  }, [maxAmountDraft, minAmountDraft]);
   const filterKey = useMemo(() => JSON.stringify(filters), [filters]);
+  const summaryFilterKey = useMemo(
+    () => JSON.stringify({ ...filters, limit: undefined, offset: undefined }),
+    [filters],
+  );
   const paymentsQuery = useQuery({
     queryKey: ['payments', filterKey],
     queryFn: () => getPayments(filters),
     placeholderData: (previousData) => previousData,
+    refetchOnWindowFocus: false,
+    staleTime: 60_000,
   });
   const summaryQuery = useQuery({
-    queryKey: ['payments-summary', filterKey],
+    queryKey: ['payments-summary', summaryFilterKey],
     queryFn: () => getPaymentsSummary(filters),
     placeholderData: (previousData) => previousData,
+    refetchOnWindowFocus: false,
+    staleTime: 60_000,
   });
   const catalogsQuery = useQuery({ queryKey: ['payment-catalogs'], queryFn: getPaymentCatalogs });
   const detailQuery = useQuery({
@@ -518,12 +510,30 @@ export function PaymentsScreen() {
     queryFn: () => getPaymentDetail(selected!.provider, selected!.id),
     enabled: Boolean(selected),
   });
+  const isApplyingFilters =
+    filterApplyKey === filterKey &&
+    (paymentsQuery.isFetching || summaryQuery.isFetching) &&
+    Math.max(
+      paymentsQuery.dataUpdatedAt,
+      paymentsQuery.errorUpdatedAt,
+      summaryQuery.dataUpdatedAt,
+      summaryQuery.errorUpdatedAt,
+    ) < filterApplyStartedAt;
   const setFilter = (key: keyof PaymentFilters, value: string | number) =>
     setFilters((current) => ({
       ...current,
       [key]: value,
       offset: key === 'offset' ? Number(value) : 0,
     }));
+  const setDraftFilter = (key: keyof PaymentFilters, value: string | number) =>
+    setFilterDraft((current) => ({ ...current, [key]: value, offset: 0 }));
+  const applyFilters = () => {
+    const nextFilters = { ...filterDraft, external_reference: filters.external_reference, offset: 0 };
+    setFilterApplyStartedAt(Date.now());
+    setFilterApplyKey(JSON.stringify(nextFilters));
+    setFilters(nextFilters);
+    if (!desktop) setMobileFiltersVisible(false);
+  };
   async function handleExport() {
     const rows = await getAllPayments(filters);
     if (!rows.length) throw new Error('No hay pagos para exportar.');
@@ -596,6 +606,7 @@ export function PaymentsScreen() {
         </View>
       ) : null}
 
+      <FilterLoadingNotice visible={isApplyingFilters && (paymentsQuery.isFetching || summaryQuery.isFetching)} />
       <View
         style={[
           styles.paymentsWorkspace,
@@ -629,41 +640,41 @@ export function PaymentsScreen() {
             <DatePickerField
               compact={filtersSidebar}
               label="Desde"
-              onChange={(value) => setFilter('from', value)}
-              value={filters.from}
+              onChange={(value) => setDraftFilter('from', value)}
+              value={filterDraft.from}
             />
           </View>
           <View style={styles.filterItem}>
             <DatePickerField
               compact={filtersSidebar}
               label="Hasta"
-              onChange={(value) => setFilter('to', value)}
-              value={filters.to}
+              onChange={(value) => setDraftFilter('to', value)}
+              value={filterDraft.to}
             />
           </View>
           <View style={styles.filterItem}>
             <AmountField
               label="Importe mínimo"
-              onChangeText={setMinAmountDraft}
+              onChangeText={(value) => setDraftFilter('min_amount', value)}
               placeholder="Ej.: 10.000"
               style={filtersSidebar ? styles.sidebarTextInput : undefined}
-              value={minAmountDraft}
+              value={filterDraft.min_amount || ''}
             />
           </View>
           <View style={styles.filterItem}>
             <AmountField
               label="Importe máximo"
-              onChangeText={setMaxAmountDraft}
+              onChangeText={(value) => setDraftFilter('max_amount', value)}
               placeholder="Ej.: 124.500,50"
               style={filtersSidebar ? styles.sidebarTextInput : undefined}
-              value={maxAmountDraft}
+              value={filterDraft.max_amount || ''}
             />
           </View>
           <View style={styles.filterItem}>
             <FilterSelect
               compact={filtersSidebar}
               label="Proveedor"
-              onChange={(value) => setFilter('provider', value)}
+              onChange={(value) => setDraftFilter('provider', value)}
               options={[
                 { value: '', label: 'Todos' },
                 ...(catalogsQuery.data?.providers || []).map((value) => ({
@@ -671,14 +682,14 @@ export function PaymentsScreen() {
                   label: providers[value] || value,
                 })),
               ]}
-              value={filters.provider || ''}
+              value={filterDraft.provider || ''}
             />
           </View>
           <View style={styles.filterItem}>
             <FilterSelect
               compact={filtersSidebar}
               label="Estado"
-              onChange={(value) => setFilter('status', value)}
+              onChange={(value) => setDraftFilter('status', value)}
               options={[
                 { value: '', label: 'Todos' },
                 ...(catalogsQuery.data?.statuses || []).map((value) => ({
@@ -686,7 +697,7 @@ export function PaymentsScreen() {
                   label: statuses[value] || value,
                 })),
               ]}
-              value={filters.status || ''}
+              value={filterDraft.status || ''}
             />
           </View>
           <View style={styles.filterItem}>
@@ -694,7 +705,7 @@ export function PaymentsScreen() {
               compact={filtersSidebar}
               label="Sucursal"
               onChange={(value) =>
-                setFilters((current) => ({
+                setFilterDraft((current) => ({
                   ...current,
                   branch_id: value,
                   terminal_id: '',
@@ -708,28 +719,28 @@ export function PaymentsScreen() {
                   label: item.name,
                 })),
               ]}
-              value={filters.branch_id || ''}
+              value={filterDraft.branch_id || ''}
             />
           </View>
           <View style={styles.filterItem}>
             <FilterSelect
               compact={filtersSidebar}
               label="Terminal"
-              onChange={(value) => setFilter('terminal_id', value)}
+              onChange={(value) => setDraftFilter('terminal_id', value)}
               options={[
                 { value: '', label: 'Todas' },
                 ...(catalogsQuery.data?.terminals || [])
-                  .filter((item) => !filters.branch_id || item.branch_id === filters.branch_id)
+                  .filter((item) => !filterDraft.branch_id || item.branch_id === filterDraft.branch_id)
                   .map((item) => ({ value: item.id, label: item.name })),
               ]}
-              value={filters.terminal_id || ''}
+              value={filterDraft.terminal_id || ''}
             />
           </View>
           <View style={styles.filterItem}>
             <FilterSelect
               compact={filtersSidebar}
               label="Medio de pago"
-              onChange={(value) => setFilter('payment_method', value)}
+              onChange={(value) => setDraftFilter('payment_method', value)}
               options={[
                 { value: '', label: 'Todos' },
                 ...(catalogsQuery.data?.payment_methods || []).map((value) => ({
@@ -737,14 +748,14 @@ export function PaymentsScreen() {
                   label: readable(value),
                 })),
               ]}
-              value={filters.payment_method || ''}
+              value={filterDraft.payment_method || ''}
             />
           </View>
           <View style={styles.filterItem}>
             <FilterSelect
               compact={filtersSidebar}
               label="Marca"
-              onChange={(value) => setFilter('card_brand', value)}
+              onChange={(value) => setDraftFilter('card_brand', value)}
               options={[
                 { value: '', label: 'Todas' },
                 ...(catalogsQuery.data?.card_brands || []).map((value) => ({
@@ -752,14 +763,14 @@ export function PaymentsScreen() {
                   label: readable(value),
                 })),
               ]}
-              value={filters.card_brand || ''}
+              value={filterDraft.card_brand || ''}
             />
           </View>
           <View style={styles.filterItem}>
             <FilterSelect
               compact={filtersSidebar}
               label="Cajero"
-              onChange={(value) => setFilter('cashier_id', value)}
+              onChange={(value) => setDraftFilter('cashier_id', value)}
               options={[
                 { value: '', label: 'Todos' },
                 ...(catalogsQuery.data?.cashiers || []).map((item) => ({
@@ -767,10 +778,13 @@ export function PaymentsScreen() {
                   label: item.name,
                 })),
               ]}
-              value={filters.cashier_id || ''}
+              value={filterDraft.cashier_id || ''}
             />
           </View>
         </View>
+        <Button loading={isApplyingFilters && (paymentsQuery.isFetching || summaryQuery.isFetching)} onPress={applyFilters}>
+          Aplicar filtros
+        </Button>
       </Card> : null}
 
       <View
@@ -778,7 +792,7 @@ export function PaymentsScreen() {
           styles.paymentsMain,
           filtersSidebar && styles.paymentsMainDesktop,
         ]}>
-      {paymentsQuery.isPending ? (
+      {paymentsQuery.isPending && !isApplyingFilters ? (
         <FeedbackState
           description="Consultando datos del ambiente aislado."
           title="Cargando pagos"
@@ -794,7 +808,6 @@ export function PaymentsScreen() {
       ) : null}
       {paymentsQuery.data ? (
         <Card
-          accessory={<Badge label={`${paymentsQuery.data.total} resultados`} tone="info" />}
           style={{
             ...styles.operationsCard,
             backgroundColor: colors.surface,
@@ -834,7 +847,13 @@ export function PaymentsScreen() {
                   ]}>
                   {label}
                 </Text>
-                <Text style={[styles.metricValue, { color: colors.text }]}>{value}</Text>
+                <Text
+                  adjustsFontSizeToFit
+                  minimumFontScale={0.55}
+                  numberOfLines={1}
+                  style={[styles.metricValue, { color: colors.text }]}>
+                  {value}
+                </Text>
               </View>
             ))}
           </View>
@@ -937,17 +956,33 @@ export function PaymentsScreen() {
             <Button
               disabled={filters.offset === 0}
               onPress={() => setFilter('offset', Math.max(0, filters.offset - PAGE_SIZE))}
+              style={styles.paginationButton}
               variant="secondary">
               Anterior
             </Button>
-            <Text style={[styles.muted, { color: colors.textMuted }]}>
-              {filters.offset + 1}–
-              {Math.min(filters.offset + PAGE_SIZE, paymentsQuery.data.total)} de{' '}
-              {paymentsQuery.data.total}
-            </Text>
+            <View style={styles.paginationStatus}>
+              <Text numberOfLines={1} style={[styles.paginationPage, { color: colors.text }]}>
+                {paginationPageLabel({ offset: filters.offset, pageSize: PAGE_SIZE })}
+              </Text>
+              <Text
+                adjustsFontSizeToFit
+                minimumFontScale={0.72}
+                numberOfLines={1}
+                style={[styles.paginationRange, { color: colors.textMuted }]}>
+                {paginationLabel({
+                  hasMore: paymentsQuery.data.hasMore,
+                  itemCount: paymentsQuery.data.items.length,
+                  offset: filters.offset,
+                  pageSize: PAGE_SIZE,
+                  total: paymentsQuery.data.total,
+                  totalExact: paymentsQuery.data.totalExact,
+                })}
+              </Text>
+            </View>
             <Button
               disabled={!paymentsQuery.data.hasMore}
               onPress={() => setFilter('offset', filters.offset + PAGE_SIZE)}
+              style={styles.paginationButton}
               variant="secondary">
               Siguiente
             </Button>
@@ -1270,12 +1305,15 @@ const styles = StyleSheet.create({
   },
   pagination: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
     alignItems: 'center',
     justifyContent: 'space-between',
-    gap: spacing.md,
+    gap: spacing.xs,
     marginTop: spacing.sm,
   },
+  paginationButton: { width: 96, flexShrink: 0 },
+  paginationStatus: { flex: 1, minWidth: 0, alignItems: 'center' },
+  paginationPage: { fontSize: 13, fontWeight: '700' },
+  paginationRange: { width: '100%', textAlign: 'center', fontSize: 12 },
   modalBackdrop: { flex: 1, justifyContent: 'flex-end', alignItems: 'center' },
   modalBackdropDesktop: { justifyContent: 'center', padding: spacing.lg },
   modal: {

@@ -113,3 +113,17 @@ Nadie modifica producción como parte de una tarea frontend. Los cambios backend
 - [ ] `FE-815` Validar importe mostrado de Conciliación, Liquidaciones y Calidad.
 - [ ] `FE-816` Validar intento seleccionado y pago combinado contra una réplica
   autorizada, sin asociaciones por importe, horario o terminal.
+
+Avance de `FE-815`:
+
+- Conciliacion validada manualmente contra el original en Android.
+- Liquidaciones y Calidad pendientes de validacion manual; el MVP ya acepta las
+  filas resumidas del backend operativo sin inventar campos del pago.
+- Calidad tolera el timeout independiente de una categoria sin reutilizar filas
+  de un periodo anterior; queda pendiente repetir la prueba Android del rango.
+- Los filtros de los cuatro modulos de listado requieren confirmacion explicita
+  con `Aplicar filtros`; no consultan por cada cambio de campo.
+- [x] Evitar que los totales y el aviso `Aplicando filtros` se recalculen al
+  paginar; mostrar rangos exactos solo cuando `meta.total_exact` lo permite.
+- [x] Señalar como `2000+` el limite operativo conocido de Liquidaciones, sin
+  presentarlo como total exacto del rango.

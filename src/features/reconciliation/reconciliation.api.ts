@@ -28,22 +28,39 @@ export const reconciliationRowSchema = z.object({
   terminal_name: z.string().optional(),
 });
 
-export const reconciliationSummarySchema = z.object({
-  total_payments: z.number(),
-  matched_count: z.number(),
-  sale_not_found_count: z.number(),
-  amount_mismatch_count: z.number(),
-  pending_review_count: z.number(),
-  total_payment_amount: z.number(),
-  total_sale_amount: z.number(),
-  total_difference: z.number(),
-  amount_mismatch_amount: z.number().default(0),
-  sale_not_found_amount: z.number().default(0),
-  pending_review_amount: z.number().default(0),
-  real_difference_amount: z.number().default(0),
-  total_exact: z.boolean(),
-  reconciliation_mode: z.string(),
-});
+export const reconciliationSummarySchema = z
+  .object({
+    total_payments: z.number(),
+    matched_count: z.number(),
+    sale_not_found_count: z.number(),
+    amount_mismatch_count: z.number(),
+    pending_review_count: z.number().default(0),
+    total_payment_amount: z.number().default(0),
+    total_sale_amount: z.number().default(0),
+    total_difference: z.number().default(0),
+    amount_mismatch_amount: z.number().optional(),
+    sale_not_found_amount: z.number().optional(),
+    pending_review_amount: z.number().optional(),
+    real_difference_amount: z.number().optional(),
+    // Nombres devueltos por versiones anteriores del backend de escritorio.
+    amount_mismatch_difference_total: z.number().optional(),
+    sale_not_found_amount_total: z.number().optional(),
+    pending_review_amount_total: z.number().optional(),
+    real_difference_total: z.number().optional(),
+    total_exact: z.boolean().default(false),
+    reconciliation_mode: z.string().default('legacy'),
+  })
+  .transform((summary) => ({
+    ...summary,
+    amount_mismatch_amount:
+      summary.amount_mismatch_amount ?? summary.amount_mismatch_difference_total ?? 0,
+    sale_not_found_amount:
+      summary.sale_not_found_amount ?? summary.sale_not_found_amount_total ?? 0,
+    pending_review_amount:
+      summary.pending_review_amount ?? summary.pending_review_amount_total ?? 0,
+    real_difference_amount:
+      summary.real_difference_amount ?? summary.real_difference_total ?? 0,
+  }));
 
 export type ReconciliationRow = z.infer<typeof reconciliationRowSchema>;
 export type ReconciliationStatus = z.infer<typeof reconciliationStatusSchema>;
@@ -81,6 +98,9 @@ export async function getReconciliationRows(filters: ReconciliationFilters) {
     items: result.data,
     total: Number(result.meta.total || 0),
     hasMore: Boolean(result.meta.has_more),
+    totalExact:
+      result.meta.total_exact === true ||
+      (result.meta.total_exact === undefined && !result.meta.has_more),
   };
 }
 
