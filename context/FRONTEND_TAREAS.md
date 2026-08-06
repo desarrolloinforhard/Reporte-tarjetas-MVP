@@ -98,3 +98,18 @@ Los IDs permiten dividir trabajo entre Nicolás y Misael sin editar los mismos m
 - Compartido: schemas, fixtures, revisiones cruzadas, conciliación, Clover, matriz y pruebas de staging.
 
 Nadie modifica producción como parte de una tarea frontend. Los cambios backend viven en su repositorio y pasan por PR y ambiente de staging.
+
+## Validaciones de compatibilidad pendientes
+
+- [x] `FE-807` Conservar filas independientes y estado visual de cada intento.
+- [x] `FE-808` Aplicar debounce sin desmontar resultados ni métricas.
+- [x] `FE-809` Separar pagos electrónicos, intentos y medios de caja en el modal.
+- [x] `FE-810` Evitar filas sintéticas de efectivo, vuelto o reintentos en Pagos.
+- [x] `FE-811` Evitar carga infinita y keys duplicadas en productos.
+- [ ] `FE-812` Validar mínimo/máximo de Pagos contra backend de staging con
+  operaciones ubicadas fuera de la primera ventana.
+- [ ] `FE-813` Validar búsqueda exacta combinada con fecha, proveedor e importe.
+- [ ] `FE-814` Validar paginación y exportación sin faltantes ni duplicados.
+- [ ] `FE-815` Validar importe mostrado de Conciliación, Liquidaciones y Calidad.
+- [ ] `FE-816` Validar intento seleccionado y pago combinado contra una réplica
+  autorizada, sin asociaciones por importe, horario o terminal.

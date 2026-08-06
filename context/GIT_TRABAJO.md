@@ -48,3 +48,13 @@ Preferir commits pequeños, coherentes y descriptivos:
 - No apuntar ramas de desarrollo a producción.
 - No realizar cambios desde este repositorio sobre `J:\Proyectos\ReportesTarjetas`.
 - No crear ramas adicionales ni forzar actualizaciones de `main` o `develop`.
+
+## Publicación de paridad del 2026-08-05/06
+
+- Backend aislado `develop`: `5c4e057` (`fix(payments): preserve attempts and exact sale relations`).
+- Frontend MVP `develop`: `6ec7e9c` (`fix(payments): match legacy payment detail behavior`).
+- Controles previos: backend tests/sintaxis; frontend lint, typecheck, 39 tests y
+  export web.
+- Los pushes fueron fast-forward y no actualizaron instalaciones de clientes.
+- Permanecen locales y sin seguimiento las utilidades de arranque específicas
+  de esta estación; no deben entrar en un commit sin revisar portabilidad.

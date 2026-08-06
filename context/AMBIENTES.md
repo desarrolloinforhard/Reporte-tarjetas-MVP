@@ -52,3 +52,16 @@ No se corrige directamente en producción. Un hotfix nace en una rama, se prueba
 ## Datos de prueba
 
 No clonar una base productiva sin anonimización y autorización. Si se necesita reproducir un caso real, crear un fixture mínimo que preserve el comportamiento y elimine identificadores, credenciales y datos personales.
+
+## Prueba local con Development Build Android
+
+- Metro debe iniciarse en modo `--dev-client`, no en modo Expo Go.
+- Expo SDK 57 debe ejecutarse con el runtime Node x64 definido por el proyecto;
+  el Node ia32 del sistema no sirve para este arranque.
+- Teléfono y PC deben compartir la misma subred para usar la dirección LAN.
+- Los puertos TCP de Metro y de la API de desarrollo deben permitirse solamente
+  en el perfil de red privada.
+- Antes de interpretar una pantalla con datos reales, verificar la URL de API
+  persistida por la app: SecureStore puede conservar una configuración anterior
+  aunque Metro entregue un frontend nuevo.
+- Iniciar Metro no despliega ni reinicia el backend configurado por la app.

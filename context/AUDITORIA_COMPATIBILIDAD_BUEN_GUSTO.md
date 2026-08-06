@@ -99,3 +99,34 @@ desde el frontend.
 - Los mismos filtros producen los mismos totales y filas en ambos clientes.
 - No se realizan escrituras ni llamadas automáticas a proveedores externos.
 - Existe respaldo y rollback de la API antes de promover una versión nueva.
+
+## Matriz de funcionamiento transitorio del MVP
+
+Revisión: 2026-08-06.
+
+Mientras el Development Build use el backend operativo anterior, funcionan sin
+depender del backend nuevo:
+
+- filas independientes y colores por estado;
+- debounce de referencia e importes, conservando pantalla y métricas visibles;
+- formato regional de fechas e importes;
+- tolerancia a campos opcionales y fallback de catálogos;
+- carga/reintento del detalle, keys únicas y presentación responsive;
+- ausencia de filas sintéticas creadas por el frontend.
+
+Requieren desplegar la versión nueva del backend en staging o réplica autorizada:
+
+- mínimo/máximo exacto en Pagos y sus exportaciones;
+- búsqueda de referencias que no estén en la ventana inicial;
+- total, `has_more` y páginas consistentes después de filtros avanzados;
+- mínimo/máximo sobre el importe presentado en Conciliación;
+- Liquidaciones y Calidad de datos cuando derivan su universo desde Pagos;
+- duplicados automáticos únicamente por proveedor e ID externo exacto;
+- separación contractual entre pagos electrónicos, intentos no aplicados y
+  medios de caja;
+- pago combinado sin fusionar operaciones por importe, hora o terminal;
+- exclusión de vuelto, importes no positivos y efectivo artificial del detalle;
+- identificación del intento seleccionado usando los IDs externos disponibles.
+
+Esta matriz describe compatibilidad, no autoriza conectar desarrollo a
+producción ni instalar cambios en Buen Gusto.

@@ -47,3 +47,18 @@ Estados permitidos: `Pendiente`, `En curso`, `Bloqueado`, `Completo`. Una fila s
 - No se prueba contra producción ni se usan secretos/datos sensibles en fixtures.
 - Hay smoke test con backend de desarrollo/staging y regresión documentada contra el comportamiento legacy.
 - Cualquier diferencia intencional de UX conserva la misma capacidad y queda registrada en un ADR.
+
+## Estado transitorio con backend operativo anterior
+
+Las capacidades de presentación del MVP pueden verificarse en Android y web,
+pero las siguientes filas permanecen `Bloqueado` para paridad completa hasta
+validar el backend nuevo en staging o réplica autorizada:
+
+- Pagos: mínimo/máximo, referencia profunda, total/paginación y exportación.
+- Detalle: pago combinado, medios de caja e identidad exacta del intento.
+- Conciliación: filtro sobre el importe presentado después de agrupar.
+- Liquidaciones: filtros y resumen cuando derivan de Pagos.
+- Calidad: universo completo y duplicados por ID externo exacto.
+
+Un Development Build conectado a una API operativa sigue siendo un cliente de
+desarrollo; no implica que los commits de backend estén instalados en esa API.

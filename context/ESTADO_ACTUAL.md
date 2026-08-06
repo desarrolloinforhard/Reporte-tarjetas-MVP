@@ -1,6 +1,6 @@
 # Estado actual
 
-Última actualización: 2026-08-05.
+Última actualización: 2026-08-06.
 
 ## Paridad Pagos y detalle en curso
 
@@ -21,6 +21,34 @@
   referencias operativas suministradas y no se consultó producción.
 - La verificación directa de relaciones con datos reales sigue pendiente de un
   staging o una réplica de lectura autorizada; desarrollo no apunta a producción.
+- Se auditó la compatibilidad del MVP contra el backend operativo 3.8.80. Las
+  mejoras puramente visuales, debounce, tolerancia contractual y estados de
+  carga funcionan desde el frontend. Los filtros monetarios completos, las
+  búsquedas profundas, los totales/páginas exactos, las relaciones de pagos
+  combinados y ciertos análisis derivados requieren el backend nuevo.
+- El Development Build del MVP no es producción. Puede mostrar información del
+  backend operativo configurado, pero un commit o actualización de Metro no
+  instala los cambios de `paquete-webserver-dev` en ese backend.
+
+## Validación y publicación de la paridad
+
+- Prueba manual web con fixtures aprobada para rango de fechas, intento
+  rechazado, productos, pagos asociados, debounce, importe y paginación básica.
+- Prueba Android del Development Build aprobada después de conectar teléfono y
+  PC a la misma subred y habilitar los puertos locales de Metro/API en el perfil
+  privado del firewall.
+- La revisión Android contra la API operativa confirmó que dos intentos visibles
+  sin importe desaparecen al aplicar un rango que debería incluirlos. La API
+  local con fixtures no fue la fuente de esas filas reales.
+- Frontend validado con lint, typecheck, 14 suites/39 tests y export web.
+- Backend aislado validado con tests y controles de sintaxis, incluida la
+  regresión sanitizada de ventana previa al filtro monetario.
+- Backend publicado en `develop`: `5c4e057`.
+- Frontend publicado en `develop`: `6ec7e9c`.
+- Ambos repositorios quedaron sincronizados con `origin/develop`, sin force
+  push y sin modificar los directorios productivos.
+- Las utilidades locales para iniciar el Development Build permanecen sin
+  seguimiento hasta decidir si deben generalizarse y documentarse.
 
 ## Implementado
 

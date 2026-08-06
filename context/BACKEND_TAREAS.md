@@ -20,6 +20,12 @@ Este archivo coordina necesidades del frontend universal. La implementación ocu
 | BE-008 | Agregar pruebas automatizadas de contratos críticos | pendiente | Misael | Protege v1 |
 | BE-009 | Revisar exportaciones y descargas en web y móvil | pendiente | Nicolás/Misael | Aditiva |
 | BE-010 | Definir observabilidad, auditoría y alertas | pendiente | Misael | Aditiva |
+| BE-011 | Validar mínimo/máximo antes de paginar todas las fuentes de Pagos | disponible_desarrollo | Nicolás/Misael | Protege listado, resumen y exportación |
+| BE-012 | Resolver referencia exacta y luego aplicar fecha y demás filtros | disponible_desarrollo | Nicolás/Misael | No cambia `/api/v1` |
+| BE-013 | Filtrar Conciliación por el importe presentado después de agrupar | disponible_desarrollo | Nicolás/Misael | Aditiva y compatible |
+| BE-014 | Separar pagos electrónicos, intentos y medios de caja sin aproximaciones | disponible_desarrollo | Nicolás/Misael | Requiere regresión Bootstack |
+| BE-015 | Detectar duplicados automáticos solo por proveedor e ID externo exacto | disponible_desarrollo | Nicolás/Misael | Evita falsos positivos |
+| BE-016 | Validar filtros, paginación y relaciones en staging/réplica autorizada | pendiente | Nicolás/Misael | Sin producción |
 
 ## Plantilla de tarea
 
@@ -79,6 +85,18 @@ El dataset sintético habilita:
 Todas las respuestas fixture declaran `meta.fixture=true`. Inicio fue validado
 en web de escritorio y móvil contra el backend aislado, sin acceso a ODBC ni
 información de clientes.
+
+## Bloqueos de compatibilidad detectados el 2026-08-06
+
+- `BE-011` a `BE-015` tienen implementación y pruebas sanitizadas en la rama
+  `develop` del backend aislado.
+- No se consideran validados con datos reales hasta completar `BE-016`.
+- Pagos, Liquidaciones y Calidad pueden heredar omisiones si aplican importes
+  sobre una ventana ya paginada.
+- Conciliación debe comparar mínimo/máximo contra el total mostrado, no contra
+  un intento individual previo a la agrupación.
+- El detalle de venta no puede relacionar medios por coincidencia de importe,
+  fecha, hora o terminal.
 
 Pagos fue validado con filtros contractuales, resumen, paginación y detalle.
 Las operaciones son sintéticas y las rutas requieren autenticación.
