@@ -29,13 +29,26 @@
 
 ### 3. Rendimiento
 
-- Parcialmente hecho: filtros bajo confirmación, caché de consultas por un
-  minuto, eliminación de recargas al recuperar foco, resumen desacoplado de la
+- Hecho en frontend: filtros bajo confirmación, caché de consultas por un minuto,
+  eliminación de recargas al recuperar foco, resumen desacoplado de la
   paginación y timeout parcial de Calidad de datos.
-- Pendiente: medir tiempos por endpoint con rangos cortos y extensos, identificar
-  consultas duplicadas restantes y optimizar primero Calidad y Conciliación con
-  evidencia antes/después. No se debe agregar caché a relaciones sensibles sin
-  confirmar su clave exacta e invalidación.
+- Hecho en backend aislado: benchmark reproducible de 19 endpoints, deduplicación
+  concurrente de lecturas en Calidad, análisis compartido entre lista/resumen de
+  Conciliación y reemplazo del N+1 de pagos sin venta por consulta masiva de
+  referencias exactas. Detalle y evidencia en `context/RENDIMIENTO_ENDPOINTS.md`.
+- Evidencia operativa previa: `data-quality/orphan-payments` superaba 60 segundos;
+  las demás categorías observadas tardaban 1,7-3,2 segundos.
+- Validación manual web con fixtures aprobada el 07/08/2026: 19 endpoints entre
+  0,73 y 1,94 ms de promedio, Calidad sin timeouts y detalle de Conciliación
+  completo. La paginación visual de Conciliación no se pudo ejercer porque sólo
+  había 15 resultados; permanece cubierta por pruebas automatizadas y pendiente
+  de repetición visual en staging con más de 20 resultados reales autorizados.
+- La misma revisión visual descubrió un falso duplicado entre proveedores en el
+  fixture. Fue eliminado: duplicados automáticos usan únicamente proveedor e ID
+  externo exactos; no se agrupa por hora, importe, terminal ni referencia. La
+  corrección quedó confirmada manualmente después de reiniciar el backend.
+- Pendiente: medir antes/después en staging para rangos de 1, 7, 30 y 61 días y
+  validar que hallazgos, relaciones y totales no cambian.
 
 ### 4. Paridad con datos reales
 

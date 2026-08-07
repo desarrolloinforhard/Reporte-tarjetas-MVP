@@ -26,6 +26,7 @@ Este archivo coordina necesidades del frontend universal. La implementación ocu
 | BE-014 | Separar pagos electrónicos, intentos y medios de caja sin aproximaciones | disponible_desarrollo | Nicolás/Misael | Requiere regresión Bootstack |
 | BE-015 | Detectar duplicados automáticos solo por proveedor e ID externo exacto | disponible_desarrollo | Nicolás/Misael | Evita falsos positivos |
 | BE-016 | Validar filtros, paginación y relaciones en staging/réplica autorizada | pendiente | Nicolás/Misael | Sin producción |
+| BE-017 | Medir y optimizar endpoints de Calidad y Conciliación | disponible_desarrollo | Nicolás/Misael | Caché acotada y referencias exactas |
 
 La autorizacion objetivo del MVP es una cuenta propietaria con consulta integral
 de todas las sucursales. `BE-005` no requiere una matriz compleja de roles en la
@@ -118,7 +119,8 @@ almacenamiento volátil antes de staging.
 1. Liquidaciones ampliadas: implementadas y validadas con fixtures; pendiente
    `BE-016` con réplica autorizada.
 2. Rendimiento: medir endpoints y optimizar Calidad/Conciliación sin alterar
-   contratos ni relaciones exactas.
+   contratos ni relaciones exactas. La implementación aislada y el benchmark
+   local están completos; falta la comparación antes/después en staging.
 3. Paridad real: validar las referencias `B-0035-00049027` y
    `B-0059-00084981` solamente en staging o lectura autorizada.
 4. Autenticación propietaria: completar persistencia del backend y validación
