@@ -224,11 +224,15 @@ export function SettlementsScreen() {
     ], rows);
   }
   const summary = summaryQuery.data;
+  const summaryIsPartial = Boolean(
+    summary?.source_truncated ||
+    (summary && !summary.total_exact && summary.settlements_count >= 2000),
+  );
   const metrics = summary
     ? [
         [
           'Liquidaciones',
-          summary.estimated && summary.settlements_count >= 2000
+          summaryIsPartial
             ? `${summary.settlements_count}+`
             : String(summary.settlements_count),
           'neutral',
@@ -374,10 +378,10 @@ export function SettlementsScreen() {
               </View>
             ))}
           </View>
-          {summary?.estimated && summary.settlements_count >= 2000 ? (
+          {summaryIsPartial ? (
             <Text style={[styles.filterHint, { color: colors.warning }]}>
-              El servidor operativo alcanzó su límite de 2000 registros. El conteo y los importes
-              mostrados son un mínimo del período, no un total exacto.
+              El servidor alcanzó el límite de exploración. El conteo y los importes mostrados son
+              un mínimo del período, no un total exacto.
             </Text>
           ) : null}
           <View style={styles.resultsSearch}>

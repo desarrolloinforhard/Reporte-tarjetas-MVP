@@ -1,6 +1,66 @@
 # Estado actual
 
-Última actualización: 2026-08-06.
+Última actualización: 2026-08-07.
+
+## Estado del plan de cierre por fases
+
+### 1. Problemas visibles y prueba manual
+
+- Hecho y validado manualmente: filtros con botón `Aplicar filtros`, estados de
+  carga, paginación estable, `Página N` centrada y botones sin desplazarse en
+  Pagos, Liquidaciones, Conciliación y Calidad.
+- Hecho: paginar no vuelve a calcular los resúmenes ni modifica sus totales.
+- Hecho y validado en web con fixtures: Liquidaciones filtra por `FECHA LIQ.` y
+  no incluye filas posteriores a `Hasta`; el rango 08/07/2026-07/08/2026
+  devolvió 7 filas, todas dentro del intervalo.
+- Pendiente de cierre: repetir la matriz completa en Android después de integrar
+  los cambios actuales y conservar evidencia de los cuatro módulos.
+
+### 2. Backend aislado de Liquidaciones
+
+- Hecho: se eliminó el límite silencioso de 2000 y se reemplazó por exploración
+  interna de hasta 50000 filas por proveedor, configurable hasta 100000.
+- Hecho: listado y resumen exponen `total_exact`, `source_truncated` y
+  `source_scan_limit`; cantidades e importes usan todo el conjunto explorado.
+- Hecho y validado con fixtures: 2505 filas, resumen, paginación, truncamiento,
+  rangos diferentes y límites inclusivos sobre la fecha de liquidación.
+- Pendiente: validar la exploración ampliada con staging o réplica autorizada de
+  solo lectura antes de proponer cualquier cambio operativo.
+
+### 3. Rendimiento
+
+- Parcialmente hecho: filtros bajo confirmación, caché de consultas por un
+  minuto, eliminación de recargas al recuperar foco, resumen desacoplado de la
+  paginación y timeout parcial de Calidad de datos.
+- Pendiente: medir tiempos por endpoint con rangos cortos y extensos, identificar
+  consultas duplicadas restantes y optimizar primero Calidad y Conciliación con
+  evidencia antes/después. No se debe agregar caché a relaciones sensibles sin
+  confirmar su clave exacta e invalidación.
+
+### 4. Paridad con datos reales
+
+- Hecho con fixtures: intentos independientes, detalle del intento seleccionado,
+  pagos asociados, intentos no aplicados y pago combinado sin fila artificial
+  de efectivo.
+- Pendiente con datos reales autorizados: validar `B-0035-00049027` y
+  `B-0059-00084981` contra el original, comparando IDs exactos, estados,
+  productos, importes y relaciones. No se considera cerrado con fixtures.
+
+### 5. Autenticación de la cuenta propietaria
+
+- Implementado en desarrollo: una cuenta con acceso integral, rutas protegidas,
+  cookie HttpOnly en web, access/refresh nativo, renovación, revocación, logout y
+  refresh token en SecureStore.
+- Pendiente: validar persistencia y revocación completas en Android, reemplazar
+  el almacenamiento volátil del backend antes de staging y decidir el bloqueo
+  local opcional por PIN o biometría. No se requiere matriz compleja de roles.
+
+### 6. Staging y piloto
+
+- Documentada la estrategia de staging, piloto, producción y rollback.
+- Pendiente: crear un backend separado, usar datos anonimizados o réplica de
+  lectura autorizada y ejecutar la matriz Android completa. Producción sigue
+  fuera de alcance y sin modificaciones.
 
 ## Paridad Pagos y detalle en curso
 
@@ -64,11 +124,16 @@
   mientras el backend informa que hay mas filas muestra pagina/rango y `hay mas`,
   sin presentar `offset + filas + 1` como cantidad total. Los resúmenes ya no se
   vuelven a consultar al avanzar o retroceder de pagina.
-- Liquidaciones operativas deriva datos desde un maximo de 2000 pagos. Al llegar
-  a ese limite el MVP muestra `2000+` y avisa que conteos e importes son minimos
-  parciales del periodo; obtener el total real requiere ampliar el contrato del
-  backend de Liquidaciones o incorporar la fuente real de acreditaciones.
-- Frontend validado con lint, typecheck, 15 suites/48 tests y export web.
+- El backend aislado elimina el antiguo tope silencioso de 2000 para
+  Liquidaciones mediante una exploracion interna de hasta 50000 filas por
+  proveedor (configurable hasta 100000). Listado y resumen exponen
+  `total_exact`, `source_truncated` y `source_scan_limit`; el frontend conserva
+  compatibilidad con el backend operativo anterior. Los filtros se aplican a
+  la fecha visible de liquidacion, incluidos ambos extremos, aunque la fecha
+  estimada se derive del pago del dia anterior. Fixtures validan 2505 filas,
+  paginacion, rangos y limites; falta validarlo con una replica autorizada antes
+  de cualquier despliegue operativo.
+- Frontend validado con lint, typecheck, 15 suites/49 tests y export web.
 - Backend aislado validado con tests y controles de sintaxis, incluida la
   regresión sanitizada de ventana previa al filtro monetario.
 - Backend publicado en `develop`: `5c4e057`.

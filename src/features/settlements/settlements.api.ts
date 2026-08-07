@@ -45,6 +45,9 @@ export const settlementsSummarySchema = z.object({
   data_source: z.string(),
   estimated: z.boolean(),
   source_note: z.string(),
+  total_exact: z.boolean().optional().default(false),
+  source_truncated: z.boolean().optional().default(false),
+  source_scan_limit: z.number().nullable().optional().default(null),
 });
 
 export type Settlement = z.infer<typeof settlementSchema>;
@@ -84,7 +87,9 @@ export async function getSettlements(filters: SettlementFilters) {
     hasMore: Boolean(result.meta.has_more),
     totalExact:
       result.meta.total_exact === true ||
-      (!result.meta.has_more && Number(result.meta.total || 0) < 2000),
+      (result.meta.total_exact === undefined &&
+        !result.meta.has_more &&
+        Number(result.meta.total || 0) < 2000),
     estimated: Boolean(result.meta.estimated),
   };
 }

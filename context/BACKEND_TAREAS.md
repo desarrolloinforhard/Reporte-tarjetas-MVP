@@ -112,6 +112,24 @@ sesión. Web utiliza una cookie opaca HttpOnly y native utiliza access/refresh
 tokens opacos. Expo protege las rutas y almacena el refresh nativo con
 SecureStore. Falta validar la development build Android y reemplazar el
 almacenamiento volátil antes de staging.
-- [ ] Liquidaciones: eliminar o paginar de forma exhaustiva el limite interno de
-  2000 pagos, exponer `total_exact`/`source_truncated` y calcular resumen e
-  importes sobre todo el rango antes de considerar esos totales definitivos.
+
+## Orden vigente de cierre (2026-08-07)
+
+1. Liquidaciones ampliadas: implementadas y validadas con fixtures; pendiente
+   `BE-016` con réplica autorizada.
+2. Rendimiento: medir endpoints y optimizar Calidad/Conciliación sin alterar
+   contratos ni relaciones exactas.
+3. Paridad real: validar las referencias `B-0035-00049027` y
+   `B-0059-00084981` solamente en staging o lectura autorizada.
+4. Autenticación propietaria: completar persistencia del backend y validación
+   Android; PIN/biometría queda como opción local.
+5. Staging: preparar ambiente separado antes del piloto.
+
+- [x] Liquidaciones (backend aislado): reemplazar el limite silencioso de 2000
+  por exploracion interna configurable y exponer
+  `total_exact`/`source_truncated`/`source_scan_limit` en listado y resumen.
+- [x] Liquidaciones (backend aislado): filtrar por la fecha de liquidacion
+  visible, incluyendo Desde/Hasta, sin perder pagos del dia previo usados para
+  estimar la acreditacion.
+- [ ] Liquidaciones: validar la exploracion ampliada con staging o replica de
+  solo lectura antes de incorporarla al backend operativo.

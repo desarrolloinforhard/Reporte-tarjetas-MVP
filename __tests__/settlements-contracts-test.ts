@@ -52,9 +52,39 @@ describe('contratos de liquidaciones', () => {
       data_source: 'payment_estimate',
       estimated: true,
       source_note: 'Fixture de desarrollo.',
+      total_exact: true,
+      source_truncated: false,
+      source_scan_limit: 50000,
     });
 
     expect(result.settlements_count).toBe(12);
     expect(result.data_source).toBe('payment_estimate');
+    expect(result.total_exact).toBe(true);
+    expect(result.source_truncated).toBe(false);
+  });
+
+  test('distingue un resumen truncado de un total exacto', () => {
+    const result = settlementsSummarySchema.parse({
+      settlements_count: 50000,
+      gross_amount: 1,
+      fee_amount: 0,
+      tax_amount: 0,
+      refund_amount: 0,
+      net_amount: 1,
+      settled_count: 50000,
+      pending_count: 0,
+      rejected_count: 0,
+      cancelled_count: 0,
+      estimated_count: 50000,
+      data_source: 'payment_estimate',
+      estimated: true,
+      source_note: 'Exploración limitada.',
+      total_exact: false,
+      source_truncated: true,
+      source_scan_limit: 50000,
+    });
+
+    expect(result.total_exact).toBe(false);
+    expect(result.source_truncated).toBe(true);
   });
 });
