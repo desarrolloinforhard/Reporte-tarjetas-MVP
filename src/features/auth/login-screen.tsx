@@ -3,6 +3,7 @@ import {
   Image,
   KeyboardAvoidingView,
   Platform,
+  Pressable,
   StyleSheet,
   Text,
   View,
@@ -19,9 +20,10 @@ import { useAppTheme } from '@/theme/theme-provider';
 
 export function LoginScreen() {
   const { colors } = useAppTheme();
-  const { login, loading } = useSession();
+  const { login, loginPending, loginError } = useSession();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [passwordVisible, setPasswordVisible] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   async function submit() {
@@ -71,8 +73,8 @@ export function LoginScreen() {
               <TextField
                 autoCapitalize="none"
                 autoComplete="username"
-                editable={!loading}
-                label="Usuario"
+                editable={!loginPending}
+                label="Email o usuario"
                 onChangeText={setUsername}
                 returnKeyType="next"
                 value={username}
@@ -80,22 +82,28 @@ export function LoginScreen() {
               <TextField
                 autoCapitalize="none"
                 autoComplete="current-password"
-                editable={!loading}
+                editable={!loginPending}
+                error={error ?? loginError ?? undefined}
                 label="Contraseña"
                 onChangeText={setPassword}
                 onSubmitEditing={submit}
+                rightAccessory={
+                  <Pressable
+                    accessibilityHint="Alterna si la contraseña se muestra o se oculta"
+                    accessibilityLabel={passwordVisible ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+                    accessibilityRole="button"
+                    hitSlop={10}
+                    onPress={() => setPasswordVisible((visible) => !visible)}>
+                    <Text style={[styles.passwordToggle, { color: colors.primary }]}>
+                      {passwordVisible ? 'Ocultar' : 'Mostrar'}
+                    </Text>
+                  </Pressable>
+                }
                 returnKeyType="done"
-                secureTextEntry
+                secureTextEntry={!passwordVisible}
                 value={password}
               />
-              {error ? (
-                <View
-                  accessibilityRole="alert"
-                  style={[styles.error, { backgroundColor: colors.dangerSoft }]}>
-                  <Text style={[styles.errorText, { color: colors.danger }]}>{error}</Text>
-                </View>
-              ) : null}
-              <Button loading={loading} onPress={submit}>
+              <Button loading={loginPending} onPress={submit}>
                 Ingresar
               </Button>
               <Text style={[styles.notice, { color: colors.textMuted }]}>
@@ -139,7 +147,6 @@ const styles = StyleSheet.create({
   product: { fontSize: typography.heading, fontWeight: '900' },
   card: { width: '100%' },
   form: { gap: spacing.md },
-  error: { borderRadius: radii.md, padding: spacing.sm },
-  errorText: { fontSize: 13, fontWeight: '700' },
+  passwordToggle: { fontSize: 13, fontWeight: '800', padding: spacing.xs },
   notice: { textAlign: 'center', fontSize: 12, lineHeight: 18 },
 });

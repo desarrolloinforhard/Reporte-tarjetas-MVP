@@ -24,6 +24,8 @@ import {
 type SessionContextValue = {
   authenticated: boolean;
   loading: boolean;
+  loginPending: boolean;
+  loginError: string | null;
   session: CurrentSession | null;
   user: CurrentUser | null;
   login: (username: string, password: string) => Promise<void>;
@@ -34,6 +36,8 @@ const SessionContext = createContext<SessionContextValue | null>(null);
 
 export function SessionProvider({ children }: PropsWithChildren) {
   const [loading, setLoading] = useState(true);
+  const [loginPending, setLoginPending] = useState(false);
+  const [loginError, setLoginError] = useState<string | null>(null);
   const [session, setSession] = useState<CurrentSession | null>(null);
   const [user, setUser] = useState<CurrentUser | null>(null);
 
@@ -135,21 +139,27 @@ export function SessionProvider({ children }: PropsWithChildren) {
     () => ({
       authenticated: Boolean(session && user),
       loading,
+      loginPending,
+      loginError,
       session,
       user,
       login: async (username, password) => {
-        setLoading(true);
+        setLoginPending(true);
+        setLoginError(null);
         try {
-          try {
-            if (await applyTrustedLocalSession()) return;
-          } catch (error) {
-            if (!(error instanceof ApiError) || error.code !== 'UNAUTHENTICATED') {
-              console.warn('No se detectÃ³ una sesiÃ³n local confiable; se usarÃ¡ el login normal.');
-            }
-          }
           await applyAuthResult(await loginRequest(username, password));
+        } catch (error) {
+          const message = error instanceof ApiError
+            ? error.code === 'RATE_LIMITED'
+              ? 'Demasiados intentos. Esperá un minuto antes de volver a probar.'
+              : error.code === 'INVALID_CREDENTIALS'
+                ? error.message
+                : 'No se pudo iniciar sesión. Volvé a intentarlo.'
+            : 'No se pudo iniciar sesión. Volvé a intentarlo.';
+          setLoginError(message);
+          throw error;
         } finally {
-          setLoading(false);
+          setLoginPending(false);
         }
       },
       logout: async () => {
@@ -163,7 +173,7 @@ export function SessionProvider({ children }: PropsWithChildren) {
         }
       },
     }),
-    [loading, session, user],
+    [loading, loginError, loginPending, session, user],
   );
 
   return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>;

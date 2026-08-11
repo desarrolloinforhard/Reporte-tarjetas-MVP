@@ -79,7 +79,8 @@ export async function apiRequestWithMeta<T extends z.ZodType>(
   };
 
   if (!envelope.ok && envelope.error) {
-    if (envelope.error.code === 'UNAUTHENTICATED' && !path.includes('/auth/')) {
+    const isLoginRequest = path === '/auth/login' || path === '/sessions/login';
+    if (envelope.error.code === 'UNAUTHENTICATED' && !isLoginRequest) {
       notifyUnauthenticated();
     }
     throw new ApiError(

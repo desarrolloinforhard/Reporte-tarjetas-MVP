@@ -1,5 +1,11 @@
 import { z } from 'zod';
 
+export const companySchema = z.object({
+  id: z.string().min(1),
+  slug: z.string().min(1),
+  display_name: z.string().min(1),
+});
+
 export const currentSessionSchema = z
   .object({
     authenticated: z.boolean(),
@@ -8,6 +14,9 @@ export const currentSessionSchema = z
     api_base_url: z.string(),
     auth_mode: z.string(),
     user_id: z.string().min(1),
+    company_id: z.string().min(1).optional(),
+    membership_id: z.string().min(1).optional(),
+    company: companySchema.optional(),
   })
   .passthrough();
 
@@ -17,6 +26,12 @@ export const currentUserSchema = z
     username: z.string().min(1),
     display_name: z.string().min(1),
     role: z.string().min(1),
+    email: z.string().email().optional(),
+    roles: z.array(z.string()).optional(),
+    is_owner: z.boolean().optional(),
+    company_id: z.string().min(1).optional(),
+    membership_id: z.string().min(1).optional(),
+    company: companySchema.optional(),
     permissions: z.array(z.string()),
     capabilities: z.record(z.string(), z.unknown()),
     branch_ids: z.array(z.union([z.string(), z.number()])),
@@ -42,3 +57,4 @@ export const logoutResultSchema = z.object({
 export type CurrentSession = z.infer<typeof currentSessionSchema>;
 export type CurrentUser = z.infer<typeof currentUserSchema>;
 export type AuthResult = z.infer<typeof authResultSchema>;
+export type Company = z.infer<typeof companySchema>;

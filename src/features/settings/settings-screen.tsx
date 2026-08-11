@@ -178,9 +178,16 @@ function SettingsContent({ compact = false }: { compact?: boolean }) {
               <Text style={[styles.optionTitle, { color: colors.text }]}>
                 {user?.display_name || 'Usuario'}
               </Text>
-              <Text style={[styles.optionDescription, { color: colors.textMuted }]}>
+              <Text
+                style={[styles.optionDescription, { color: colors.textMuted }]}>
                 {user?.username} · {user?.role}
               </Text>
+              {user?.company ? (
+                <Text
+                  style={[styles.optionDescription, { color: colors.textMuted }]}>
+                  Empresa activa: {user.company.display_name}
+                </Text>
+              ) : null}
             </View>
             <Button loading={loading} onPress={logout} variant="secondary">
               Cerrar sesión
