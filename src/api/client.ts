@@ -88,6 +88,7 @@ export async function apiRequestWithMeta<T extends z.ZodType>(
       envelope.error.message,
       response.status,
       envelope.meta.request_id,
+      envelope.meta,
     );
   }
 

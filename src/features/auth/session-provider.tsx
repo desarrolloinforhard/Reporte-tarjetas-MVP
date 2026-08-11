@@ -25,6 +25,7 @@ type SessionContextValue = {
   authenticated: boolean;
   loading: boolean;
   loginPending: boolean;
+  loginCooldownSeconds: number;
   loginError: string | null;
   session: CurrentSession | null;
   user: CurrentUser | null;
@@ -37,6 +38,7 @@ const SessionContext = createContext<SessionContextValue | null>(null);
 export function SessionProvider({ children }: PropsWithChildren) {
   const [loading, setLoading] = useState(true);
   const [loginPending, setLoginPending] = useState(false);
+  const [loginCooldownSeconds, setLoginCooldownSeconds] = useState(0);
   const [loginError, setLoginError] = useState<string | null>(null);
   const [session, setSession] = useState<CurrentSession | null>(null);
   const [user, setUser] = useState<CurrentUser | null>(null);
@@ -135,11 +137,20 @@ export function SessionProvider({ children }: PropsWithChildren) {
     return () => clearTimeout(timer);
   }, [session?.expires_at]);
 
+  useEffect(() => {
+    if (loginCooldownSeconds <= 0) return;
+    const timer = setTimeout(() => {
+      setLoginCooldownSeconds((seconds) => Math.max(0, seconds - 1));
+    }, 1000);
+    return () => clearTimeout(timer);
+  }, [loginCooldownSeconds]);
+
   const value = useMemo<SessionContextValue>(
     () => ({
       authenticated: Boolean(session && user),
       loading,
       loginPending,
+      loginCooldownSeconds,
       loginError,
       session,
       user,
@@ -149,14 +160,20 @@ export function SessionProvider({ children }: PropsWithChildren) {
         try {
           await applyAuthResult(await loginRequest(username, password));
         } catch (error) {
+          const retryAfterSeconds = error instanceof ApiError
+            ? Number(error.meta.retry_after_seconds)
+            : NaN;
           const message = error instanceof ApiError
             ? error.code === 'RATE_LIMITED'
-              ? 'Demasiados intentos. Esperá un minuto antes de volver a probar.'
+              ? 'Demasiados intentos. Esperá a que termine el contador para volver a probar.'
               : error.code === 'INVALID_CREDENTIALS'
                 ? error.message
                 : 'No se pudo iniciar sesión. Volvé a intentarlo.'
             : 'No se pudo iniciar sesión. Volvé a intentarlo.';
           setLoginError(message);
+          if (Number.isFinite(retryAfterSeconds) && retryAfterSeconds > 0) {
+            setLoginCooldownSeconds(Math.ceil(retryAfterSeconds));
+          }
           throw error;
         } finally {
           setLoginPending(false);
@@ -173,7 +190,7 @@ export function SessionProvider({ children }: PropsWithChildren) {
         }
       },
     }),
-    [loading, loginError, loginPending, session, user],
+    [loading, loginCooldownSeconds, loginError, loginPending, session, user],
   );
 
   return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>;

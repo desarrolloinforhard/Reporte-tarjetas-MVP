@@ -10,7 +10,6 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { ApiError } from '@/api/api-error';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { TextField } from '@/components/ui/text-field';
@@ -20,11 +19,16 @@ import { useAppTheme } from '@/theme/theme-provider';
 
 export function LoginScreen() {
   const { colors } = useAppTheme();
-  const { login, loginPending, loginError } = useSession();
+  const { login, loginPending, loginCooldownSeconds, loginError } = useSession();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [passwordVisible, setPasswordVisible] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const loginBlocked = loginCooldownSeconds > 0;
+  const countdown = `${Math.floor(loginCooldownSeconds / 60)}:${String(loginCooldownSeconds % 60).padStart(2, '0')}`;
+  const loginFeedback = loginBlocked
+    ? `Demasiados intentos. Podés volver a probar en ${countdown}.`
+    : error ?? (loginError?.startsWith('Demasiados intentos.') ? undefined : loginError) ?? undefined;
 
   async function submit() {
     if (!username.trim() || !password) {
@@ -35,13 +39,7 @@ export function LoginScreen() {
     setError(null);
     try {
       await login(username.trim(), password);
-    } catch (requestError) {
-      setError(
-        requestError instanceof ApiError
-          ? requestError.message
-          : 'No se pudo iniciar sesión. Volvé a intentarlo.',
-      );
-    }
+    } catch {}
   }
 
   return (
@@ -73,7 +71,7 @@ export function LoginScreen() {
               <TextField
                 autoCapitalize="none"
                 autoComplete="username"
-                editable={!loginPending}
+                editable={!loginPending && !loginBlocked}
                 label="Email o usuario"
                 onChangeText={setUsername}
                 returnKeyType="next"
@@ -82,8 +80,8 @@ export function LoginScreen() {
               <TextField
                 autoCapitalize="none"
                 autoComplete="current-password"
-                editable={!loginPending}
-                error={error ?? loginError ?? undefined}
+                editable={!loginPending && !loginBlocked}
+                error={loginFeedback}
                 label="Contraseña"
                 onChangeText={setPassword}
                 onSubmitEditing={submit}
@@ -103,8 +101,8 @@ export function LoginScreen() {
                 secureTextEntry={!passwordVisible}
                 value={password}
               />
-              <Button loading={loginPending} onPress={submit}>
-                Ingresar
+              <Button disabled={loginBlocked} loading={loginPending} onPress={submit}>
+                {loginBlocked ? `Esperá ${countdown}` : 'Ingresar'}
               </Button>
               <Text style={[styles.notice, { color: colors.textMuted }]}>
                 Esta instancia utiliza usuarios y datos sintéticos. No está conectada a producción.
