@@ -18,7 +18,9 @@ import {
 import type { CurrentSession, CurrentUser } from '@/features/auth/session.contracts';
 import {
   getStoredRefreshToken,
+  getStoredSessionMarker,
   setStoredRefreshToken,
+  setStoredSessionMarker,
 } from '@/features/auth/session.storage';
 
 type SessionContextValue = {
@@ -46,6 +48,7 @@ export function SessionProvider({ children }: PropsWithChildren) {
   async function applyAuthResult(result: Awaited<ReturnType<typeof loginRequest>>) {
     setAccessToken(result.access_token);
     await setStoredRefreshToken(result.refresh_token);
+    await setStoredSessionMarker(true);
     setSession(result.session);
     setUser(result.user);
   }
@@ -53,6 +56,7 @@ export function SessionProvider({ children }: PropsWithChildren) {
   async function clearSession() {
     setAccessToken(null);
     await setStoredRefreshToken(null);
+    await setStoredSessionMarker(false);
     setSession(null);
     setUser(null);
     queryClient.clear();
@@ -63,6 +67,7 @@ export function SessionProvider({ children }: PropsWithChildren) {
     if (!local) return false;
     setAccessToken(null);
     await setStoredRefreshToken(null);
+    await setStoredSessionMarker(true);
     setSession(local.session);
     setUser(local.user);
     return true;
@@ -70,7 +75,13 @@ export function SessionProvider({ children }: PropsWithChildren) {
 
   useEffect(() => {
     return subscribeToUnauthenticated(() => {
-      void clearSession();
+      void (async () => {
+        const hadPreviousSession = await getStoredSessionMarker();
+        await clearSession();
+        if (hadPreviousSession) {
+          setLoginError('Tu sesión venció o fue revocada. Iniciá sesión nuevamente.');
+        }
+      })();
     });
   }, []);
 
@@ -85,6 +96,7 @@ export function SessionProvider({ children }: PropsWithChildren) {
             getCurrentUser(),
           ]);
           if (active) {
+            await setStoredSessionMarker(true);
             setSession(currentSession);
             setUser(currentUser);
           }
