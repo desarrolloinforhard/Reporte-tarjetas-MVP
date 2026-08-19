@@ -1,6 +1,16 @@
 # Estado actual
 
-Última actualización: 2026-08-07.
+Última actualización: 2026-08-19.
+
+## Release frontend 0.2.0
+
+- Candidata de entrega de desarrollo: autenticación fixture ampliada con
+  recuperación genérica, cambio de contraseña, cierre de sesiones, controles de
+  visibilidad y fortaleza de contraseña, más la preparación documentada del
+  ensayo seguro de staging.
+- Esta versión permanece aislada: no contiene datos reales, no apunta a
+  producción y la recuperación por correo o persistencia durable de sesiones
+  siguen pendientes de la plataforma PostgreSQL.
 
 ## Estado del plan de cierre por fases
 
@@ -67,13 +77,79 @@
 - Pendiente: validar persistencia y revocación completas en Android, reemplazar
   el almacenamiento volátil del backend antes de staging y decidir el bloqueo
   local opcional por PIN o biometría. No se requiere matriz compleja de roles.
+- Avance 2026-08-11: el fixture de autenticación representa ahora una cuenta
+  propietaria (`owner`) y la sesión incluye `company_id`, `membership_id` y la
+  empresa activa seleccionada por el servidor. El frontend acepta el contrato
+  ampliado sin perder compatibilidad con la API operativa anterior y muestra la
+  empresa activa en Configuración.
+- Validación del avance: backend completo aprobado; frontend aprobado con lint,
+  typecheck y 15 suites/49 pruebas. Falta la prueba manual Android de
+  restauración, renovación, logout y reapertura.
+- Mejora de usabilidad en desarrollo: el inicio fallido conserva el formulario,
+  muestra el error junto a la contraseña y permite mostrar u ocultar su valor.
+  El limitador fixture mantiene cinco fallos por minuto por origen y, en los dos
+  últimos intentos disponibles, avisa cuántos quedan antes de la pausa. Un
+  inicio exitoso reinicia el contador. Esta política es exclusiva del entorno
+  aislado; la política durable de producción queda sujeta al contrato IHAPI-F4-019.
+- Cuando el límite fixture ya está activo, la respuesta incluye el estándar
+  `Retry-After` y `meta.retry_after_seconds`. El frontend muestra una cuenta
+  regresiva `m:ss`, deshabilita los campos y el botón hasta cero y luego permite
+  volver a intentar sin recargar la pantalla.
+- Una sesión previamente autenticada que recibe `UNAUTHENTICATED` se limpia de
+  forma segura y muestra en el login el aviso de expiración o revocación. Una
+  apertura inicial sin sesión no muestra ese aviso.
+- No se implementará una recuperación ficticia ni selección multiempresa solo
+  local: ambas deben respetar el contrato IHAPI-F4-019 y conectarse luego al
+  repositorio PostgreSQL durable. El fixture de una sola empresa se selecciona
+  automáticamente, igual que el contrato objetivo.
 
 ### 6. Staging y piloto
 
 - Documentada la estrategia de staging, piloto, producción y rollback.
+- Disponible en desarrollo: ensayo local de staging en el puerto `5011`, con
+  fixtures, base deshabilitada, integraciones externas apagadas, validación de
+  arranque y bloqueo HTTP de escrituras salvo las operaciones de sesión.
+- Disponible en desarrollo: perfil frontend `.env.staging.example` que apunta
+  solamente al ensayo local aislado. No contiene credenciales ni direcciones
+  productivas.
 - Pendiente: crear un backend separado, usar datos anonimizados o réplica de
   lectura autorizada y ejecutar la matriz Android completa. Producción sigue
   fuera de alcance y sin modificaciones.
+- La réplica real requerirá una cuenta limitada a `SELECT` por el motor de base,
+  credenciales exclusivas, HTTPS, CORS explícito y confirmaciones de seguridad.
+  El backend se niega a iniciar en modo staging si esas barreras no se cumplen.
+- Auditoría estática de reemplazo completada en
+  `context/AUDITORIA_REEMPLAZO_ORIGINAL.md`. Confirma que el escritorio es un
+  cliente de `/api/v1`, que el monolito operativo no es de solo lectura y que su
+  heartbeat escribe cada 30 segundos. La recomendación es un `reporting-api`
+  separado, sin heartbeat ni workers, con cuenta ODBC `SELECT` y Gateway HTTPS.
+- Hallazgo de versión corregido mediante health remoto y releases: Buen Gusto
+  ejecuta `3.8.80`/contrato `2026-07-24.2`. El release más nuevo disponible es
+  `3.8.82`/contrato `2026-08-07.1`, pero no está desplegado actualmente. La
+  integración debe usar `3.8.82` como base funcional y sumar las mejoras del MVP
+  por módulos, sin sobrescribir producción ni perder los cambios de 3.8.81/82.
+- Plan detallado de integración registrado en
+  `context/PLAN_INTEGRACION_BACKEND_3_8_82.md`.
+- Integrado en el backend editable el almacenamiento JSON de productos de
+  `3.8.82`: carga/lectura por código, conservación del cuerpo original,
+  reemplazo atómico, validación, límite configurable y flags independientes.
+  Staging rechaza explícitamente la escritura JSON. La prueba específica (6/6)
+  y la suite completa del backend quedaron aprobadas.
+- Integración selectiva de Unicobros/Clover `3.8.82` verificada: Unicobros ya
+  estaba funcionalmente actualizado en el backend dev y mantiene además logs
+  saneados y debug opt-in. Clover ahora recupera también `refresh_token`, los
+  vencimientos, `region` y `env` de cada comercio activo. Se agregó una prueba
+  de regresión del almacenamiento Clover y la suite completa quedó aprobada.
+- Configuración y metadatos de `3.8.82` alineados en el backend editable:
+  versión base `3.8.82`, contrato `2026-08-07.1` y `APP_VERSION` configurable
+  para distinguir staging/candidatos bajo PM2. `/health`, la sintaxis del
+  actualizador y el creador de releases fueron verificados; este último se
+  ejecutó con `/check`, sin generar ZIP ni desplegar archivos.
+- Confirmado por Nicolás: las actualizaciones de la API de Buen Gusto se hacen
+  manualmente desde consola mediante un paquete de release y el proceso se
+  reinicia con PM2; commits y pushes no despliegan al cliente. Falta identificar
+  con Misael el comando exacto, el nombre del proceso PM2 y las verificaciones de
+  health/rollback del procedimiento.
 
 ## Paridad Pagos y detalle en curso
 
@@ -312,3 +388,25 @@ oficiales del SDK.
 - No conectar el frontend nuevo a producción.
 - No incluir secretos en variables `EXPO_PUBLIC_*`.
 - No introducir cambios incompatibles en `/api/v1`.
+
+## Regresion integral staging 3.8.82 (2026-08-10)
+
+- Backend fixture aislado validado en `http://localhost:5011/api/v1`, sin ODBC
+  ni integraciones externas, con version `3.8.82-mvp-staging`.
+- Backend: `npm run check` aprobado.
+- Frontend: `npm run check` aprobado (lint, typecheck y 15 suites / 49 tests).
+- Login fixture e Inicio verificados en web.
+- Pagos: listado, metricas, filtro manual por importe y detalle verificados.
+- Detalle de pago: resumen, cinco productos y pago asociado verificados.
+- Liquidaciones: listado, resumen, filtro manual por importe y paginador estable
+  verificados.
+- Conciliacion: las seis metricas, totales, listado y detalle conciliado fueron
+  verificados.
+- Calidad de datos: resumen y categorias de referencias faltantes, pagos sin
+  venta e importes atipicos verificados; duplicados en cero.
+- No se observaron errores de ejecucion ni respuestas HTTP 401/500. Solo aparece
+  la advertencia conocida de Expo web sobre propiedades `shadow*` obsoletas.
+- Los fixtures actuales tienen menos de una pagina por modulo. La navegacion
+  multipagina queda cubierta por las pruebas automatizadas y requiere un dataset
+  mayor para una nueva comprobacion visual.
+- Produccion y el proyecto original no fueron modificados.

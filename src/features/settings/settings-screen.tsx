@@ -7,6 +7,7 @@ import { ScreenFrame } from '@/components/layout/screen-frame';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { TextField } from '@/components/ui/text-field';
 import { appEnvironment } from '@/config/environment';
 import { queryClient } from '@/config/query-client';
 import { getApiBaseUrl } from '@/config/runtime-api';
@@ -23,11 +24,22 @@ const themeOptions: { label: string; value: ThemePreference; description: string
 
 function SettingsContent({ compact = false }: { compact?: boolean }) {
   const { colors, preference, savedPreference, savePreference, setPreference } = useAppTheme();
-  const { logout, user, loading } = useSession();
+  const { changePassword, logout, user, loading } = useSession();
   const [savingTheme, setSavingTheme] = useState(false);
   const [themeSaved, setThemeSaved] = useState(false);
   const [technicalVisible, setTechnicalVisible] = useState(false);
   const [configuredApiUrl, setConfiguredApiUrl] = useState(getApiBaseUrl);
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [passwordPending, setPasswordPending] = useState(false);
+  const [passwordError, setPasswordError] = useState<string | null>(null);
+  const [passwordSaved, setPasswordSaved] = useState(false);
+  const [passwordFormVisible, setPasswordFormVisible] = useState(false);
+  const [currentPasswordVisible, setCurrentPasswordVisible] = useState(false);
+  const [newPasswordVisible, setNewPasswordVisible] = useState(false);
+  const [confirmPasswordVisible, setConfirmPasswordVisible] = useState(false);
+  const [logoutConfirmVisible, setLogoutConfirmVisible] = useState(false);
   const hasThemeChanges = preference !== savedPreference;
   const healthQuery = useQuery({
     queryKey: ['health'],
@@ -56,6 +68,55 @@ function SettingsContent({ compact = false }: { compact?: boolean }) {
       setSavingTheme(false);
     }
   }
+
+  async function handleChangePassword() {
+    setPasswordSaved(false);
+    if (!currentPassword || !newPassword || !confirmPassword) {
+      setPasswordError('Completá la contraseña actual, la nueva y su confirmación.');
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      setPasswordError('La confirmación no coincide con la nueva contraseña.');
+      return;
+    }
+    setPasswordPending(true);
+    setPasswordError(null);
+    try {
+      await changePassword(currentPassword, newPassword);
+      setCurrentPassword('');
+      setNewPassword('');
+      setConfirmPassword('');
+      setPasswordSaved(true);
+      setPasswordFormVisible(false);
+    } catch (error) {
+      setPasswordError(error instanceof Error ? error.message : 'No se pudo cambiar la contraseña.');
+    } finally {
+      setPasswordPending(false);
+    }
+  }
+
+  function passwordStrength(value: string) {
+    if (!value) return null;
+    let score = 0;
+    if (value.length >= 8) score += 1;
+    if (/[A-Z]/.test(value) && /[a-z]/.test(value)) score += 1;
+    if (/\d/.test(value)) score += 1;
+    if (/[^A-Za-z0-9]/.test(value)) score += 1;
+    if (score <= 1) return { label: 'Débil', color: colors.danger };
+    if (score <= 3) return { label: 'Media', color: colors.warning };
+    return { label: 'Fuerte', color: colors.success };
+  }
+
+  const strength = passwordStrength(newPassword);
+  const passwordAccessory = (visible: boolean, onPress: () => void) => (
+    <Pressable
+      accessibilityLabel={visible ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+      accessibilityRole="button"
+      hitSlop={10}
+      onPress={onPress}>
+      <Text style={[styles.passwordToggle, { color: colors.primary }]}>{visible ? 'Ocultar' : 'Mostrar'}</Text>
+    </Pressable>
+  );
 
   return (
       <View style={[styles.grid, compact && styles.compactGrid]}>
@@ -116,6 +177,7 @@ function SettingsContent({ compact = false }: { compact?: boolean }) {
               disabled={!hasThemeChanges}
               loading={savingTheme}
               onPress={handleSaveTheme}
+              style={hasThemeChanges ? undefined : { backgroundColor: colors.surfaceMuted, borderColor: colors.border }}
               variant={hasThemeChanges ? 'primary' : 'secondary'}>
               {hasThemeChanges ? 'Guardar configuración' : 'Guardado'}
             </Button>
@@ -162,7 +224,10 @@ function SettingsContent({ compact = false }: { compact?: boolean }) {
                 ]}>
                 No se pudo conectar con el backend configurado.
               </Text>
-              <Button variant="secondary" onPress={() => healthQuery.refetch()}>
+              <Button
+                onPress={() => healthQuery.refetch()}
+                style={{ backgroundColor: colors.primarySoft, borderColor: colors.primary }}
+                variant="secondary">
                 Reintentar
               </Button>
             </View>
@@ -189,9 +254,72 @@ function SettingsContent({ compact = false }: { compact?: boolean }) {
                 </Text>
               ) : null}
             </View>
-            <Button loading={loading} onPress={logout} variant="secondary">
+            <Button loading={loading} onPress={() => setLogoutConfirmVisible(true)} variant="danger">
               Cerrar sesión
             </Button>
+            <View style={[styles.technicalAccess, { borderTopColor: colors.border }]}>
+              <View style={styles.optionCopy}>
+                <Text style={[styles.optionTitle, { color: colors.text }]}>Seguridad de la cuenta</Text>
+                <Text style={[styles.optionDescription, { color: colors.textMuted }]}>Actualizá tu contraseña de acceso.</Text>
+              </View>
+              <Button
+                onPress={() => {
+                  setPasswordFormVisible((visible) => !visible);
+                  setPasswordError(null);
+                  setPasswordSaved(false);
+                }}
+                style={passwordFormVisible ? undefined : { backgroundColor: colors.primarySoft, borderColor: colors.primary }}
+                variant="secondary">
+                {passwordFormVisible ? 'Cancelar' : 'Cambiar contraseña'}
+              </Button>
+            </View>
+            {passwordFormVisible ? (
+              <View style={styles.passwordForm}>
+                <Text style={[styles.optionDescription, { color: colors.textMuted }]}>La nueva contraseña cierra las demás sesiones de esta cuenta.</Text>
+                <TextField
+                  autoCapitalize="none"
+                  autoComplete="current-password"
+                  editable={!passwordPending}
+                  label="Contraseña actual"
+                  onChangeText={setCurrentPassword}
+                  rightAccessory={passwordAccessory(currentPasswordVisible, () => setCurrentPasswordVisible((visible) => !visible))}
+                  secureTextEntry={!currentPasswordVisible}
+                  value={currentPassword}
+                />
+                <TextField
+                  autoCapitalize="none"
+                  autoComplete="new-password"
+                  editable={!passwordPending}
+                  hint="Al menos 8 caracteres y distinta de la actual."
+                  label="Nueva contraseña"
+                  onChangeText={setNewPassword}
+                  rightAccessory={passwordAccessory(newPasswordVisible, () => setNewPasswordVisible((visible) => !visible))}
+                  secureTextEntry={!newPasswordVisible}
+                  value={newPassword}
+                />
+                {strength ? (
+                  <Text style={[styles.strengthLabel, { color: strength.color }]}>Seguridad de la contraseña: {strength.label}</Text>
+                ) : null}
+                <TextField
+                  autoCapitalize="none"
+                  autoComplete="new-password"
+                  editable={!passwordPending}
+                  error={passwordError ?? undefined}
+                  label="Confirmar nueva contraseña"
+                  onChangeText={setConfirmPassword}
+                  onSubmitEditing={handleChangePassword}
+                  rightAccessory={passwordAccessory(confirmPasswordVisible, () => setConfirmPasswordVisible((visible) => !visible))}
+                  secureTextEntry={!confirmPasswordVisible}
+                  value={confirmPassword}
+                />
+                <Button loading={passwordPending} onPress={handleChangePassword}>
+                  Guardar nueva contraseña
+                </Button>
+              </View>
+            ) : null}
+            {passwordSaved ? (
+              <Text style={[styles.optionDescription, { color: colors.success }]}>Contraseña actualizada correctamente.</Text>
+            ) : null}
             <View style={[styles.technicalAccess, { borderTopColor: colors.border }]}>
               <View style={styles.optionCopy}>
                 <Text style={[styles.optionTitle, { color: colors.text }]}>Soporte técnico</Text>
@@ -199,7 +327,10 @@ function SettingsContent({ compact = false }: { compact?: boolean }) {
                   Configuración protegida de la conexión API.
                 </Text>
               </View>
-              <Button onPress={() => setTechnicalVisible(true)} variant="secondary">
+              <Button
+                onPress={() => setTechnicalVisible(true)}
+                style={{ backgroundColor: colors.primarySoft, borderColor: colors.primary }}
+                variant="secondary">
                 Entrar como técnico
               </Button>
             </View>
@@ -213,6 +344,26 @@ function SettingsContent({ compact = false }: { compact?: boolean }) {
           }}
           visible={technicalVisible}
         />
+        <Modal animationType="fade" onRequestClose={() => setLogoutConfirmVisible(false)} transparent visible={logoutConfirmVisible}>
+          <View style={styles.confirmBackdrop}>
+            <View style={[styles.confirmPanel, { backgroundColor: colors.surfaceElevated }]}>
+              <Text style={[styles.confirmTitle, { color: colors.text }]}>¿Cerrar sesión?</Text>
+              <Text style={[styles.confirmText, { color: colors.textMuted }]}>Vas a salir de esta cuenta en este dispositivo.</Text>
+              <View style={styles.confirmActions}>
+                <Button onPress={() => setLogoutConfirmVisible(false)} variant="secondary">Cancelar</Button>
+                <Button
+                  loading={loading}
+                  onPress={async () => {
+                    setLogoutConfirmVisible(false);
+                    await logout();
+                  }}
+                  variant="danger">
+                  Cerrar sesión
+                </Button>
+              </View>
+            </View>
+          </View>
+        </Modal>
       </View>
   );
 }
@@ -378,6 +529,11 @@ const styles = StyleSheet.create({
   account: {
     gap: spacing.md,
   },
+  passwordForm: {
+    gap: spacing.md,
+  },
+  passwordToggle: { fontSize: 13, fontWeight: '800', padding: spacing.xs },
+  strengthLabel: { fontSize: 12, fontWeight: '800', marginTop: -spacing.xs },
   technicalAccess: {
     borderTopWidth: 1,
     paddingTop: spacing.md,
@@ -405,6 +561,23 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     padding: spacing.md,
   },
+  confirmBackdrop: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.45)',
+    padding: spacing.lg,
+  },
+  confirmPanel: {
+    width: '100%',
+    maxWidth: 420,
+    borderRadius: radii.xl,
+    padding: spacing.lg,
+    gap: spacing.md,
+  },
+  confirmTitle: { fontSize: 20, fontWeight: '900' },
+  confirmText: { fontSize: 14, lineHeight: 20 },
+  confirmActions: { flexDirection: 'row', justifyContent: 'flex-end', gap: spacing.sm, flexWrap: 'wrap' },
   modalOverlay: {
     position: 'absolute',
     top: 0,

@@ -11,7 +11,7 @@ import {
 import { radii, spacing } from '@/theme/tokens';
 import { useAppTheme } from '@/theme/theme-provider';
 
-type ButtonVariant = 'primary' | 'secondary' | 'ghost';
+type ButtonVariant = 'primary' | 'secondary' | 'danger' | 'ghost';
 
 type ButtonProps = PropsWithChildren<
   PressableProps & {
@@ -42,6 +42,11 @@ export function Button({
       background: colors.surface,
       border: colors.borderStrong,
       text: colors.text,
+    },
+    danger: {
+      background: colors.danger,
+      border: colors.danger,
+      text: colors.onPrimary,
     },
     ghost: {
       background: 'transparent',

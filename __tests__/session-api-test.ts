@@ -1,7 +1,9 @@
 import { apiRequest } from '@/api/client';
 import {
+  changePassword,
   loginForPlatform,
   logoutSessionForPlatform,
+  requestPasswordReset,
 } from '@/features/auth/session.api';
 
 jest.mock('@/api/client', () => ({
@@ -46,6 +48,41 @@ describe('API de autenticación web', () => {
       {
         method: 'POST',
         credentials: 'include',
+      },
+    );
+  });
+
+  test('solicita recuperación sin revelar datos de la cuenta', async () => {
+    mockedApiRequest.mockResolvedValueOnce({ accepted: true } as never);
+
+    await requestPasswordReset('propietario@empresa.invalid');
+
+    expect(mockedApiRequest).toHaveBeenCalledWith(
+      '/sessions/password-reset/request',
+      expect.anything(),
+      {
+        method: 'POST',
+        body: { username_or_email: 'propietario@empresa.invalid' },
+      },
+    );
+  });
+
+  test('cambia contraseña con el contrato protegido de sesión', async () => {
+    mockedApiRequest.mockResolvedValueOnce({} as never);
+
+    await changePassword('actual-segura', 'nueva-segura');
+
+    expect(mockedApiRequest).toHaveBeenCalledWith(
+      '/sessions/password/change',
+      expect.anything(),
+      {
+        method: 'POST',
+        credentials: 'include',
+        body: {
+          current_password: 'actual-segura',
+          new_password: 'nueva-segura',
+          client_type: expect.any(String),
+        },
       },
     );
   });

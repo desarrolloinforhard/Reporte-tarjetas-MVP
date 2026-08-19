@@ -11,6 +11,7 @@ import {
   getCurrentSession,
   getCurrentUser,
   getTrustedLocalSession,
+  changePassword as changePasswordRequest,
   login as loginRequest,
   logoutSession,
   refreshSession,
@@ -32,6 +33,7 @@ type SessionContextValue = {
   session: CurrentSession | null;
   user: CurrentUser | null;
   login: (username: string, password: string) => Promise<void>;
+  changePassword: (currentPassword: string, newPassword: string) => Promise<void>;
   logout: () => Promise<void>;
 };
 
@@ -190,6 +192,9 @@ export function SessionProvider({ children }: PropsWithChildren) {
         } finally {
           setLoginPending(false);
         }
+      },
+      changePassword: async (currentPassword, newPassword) => {
+        await applyAuthResult(await changePasswordRequest(currentPassword, newPassword));
       },
       logout: async () => {
         setLoading(true);

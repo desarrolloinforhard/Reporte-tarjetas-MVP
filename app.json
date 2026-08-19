@@ -4,7 +4,7 @@
     "slug": "reporte-tarjetas-mvp",
     "owner": "nicolasets-team",
     "description": "Reportes de tarjetas para clientes de Inforhard S.R.L",
-    "version": "0.1.0",
+    "version": "0.2.0",
     "platforms": [
       "ios",
       "android",

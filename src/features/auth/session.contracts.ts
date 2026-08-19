@@ -54,6 +54,10 @@ export const logoutResultSchema = z.object({
   logged_out: z.literal(true),
 });
 
+export const passwordResetRequestSchema = z.object({
+  accepted: z.literal(true),
+});
+
 export type CurrentSession = z.infer<typeof currentSessionSchema>;
 export type CurrentUser = z.infer<typeof currentUserSchema>;
 export type AuthResult = z.infer<typeof authResultSchema>;

@@ -12,7 +12,7 @@ Este archivo coordina necesidades del frontend universal. La implementación ocu
 |---|---|---|---|---|
 | BE-001 | Inventariar endpoints y contratos usados por la app Bootstack | en_progreso | Nicolás/Misael | Solo lectura |
 | BE-002 | Preparar runtime y datos seguros de desarrollo | disponible_desarrollo | Nicolás/Misael | Sin producción |
-| BE-003 | Preparar staging aislado | pendiente | Misael | Sin producción |
+| BE-003 | Preparar staging aislado | disponible_desarrollo | Misael | Ensayo local seguro listo; infraestructura real pendiente |
 | BE-004 | Diseñar autenticación web/móvil y transición del cliente legacy | disponible_desarrollo | Nicolás/Misael | No activar globalmente |
 | BE-005 | Definir autorización por cliente, sucursal, rol y operación | pendiente | Misael | Aditiva |
 | BE-006 | Configurar CORS por ambiente | pendiente | Misael | Aditiva |
@@ -113,6 +113,12 @@ sesión. Web utiliza una cookie opaca HttpOnly y native utiliza access/refresh
 tokens opacos. Expo protege las rutas y almacena el refresh nativo con
 SecureStore. Falta validar la development build Android y reemplazar el
 almacenamiento volátil antes de staging.
+
+El 2026-08-11 se alineó la identidad fixture con el contrato propietario:
+`role=owner`, empresa y membresía activas dentro de usuario y sesión. Esto
+permite validar el caso de una sola empresa sin inventar persistencia. Selección
+entre varias empresas, recuperación de contraseña y revocación durable siguen
+dependiendo del repositorio PostgreSQL definido por IHAPI-F4-019.
 
 ## Orden vigente de cierre (2026-08-07)
 

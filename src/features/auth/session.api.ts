@@ -4,6 +4,7 @@ import {
   currentSessionSchema,
   currentUserSchema,
   logoutResultSchema,
+  passwordResetRequestSchema,
   type AuthResult,
   type CurrentSession,
   type CurrentUser,
@@ -70,6 +71,28 @@ export function refreshSession(refreshToken?: string | null): Promise<AuthResult
 
 export function logoutSession(refreshToken?: string | null) {
   return logoutSessionForPlatform(Platform.OS, refreshToken);
+}
+
+export function requestPasswordReset(usernameOrEmail: string) {
+  return apiRequest('/sessions/password-reset/request', passwordResetRequestSchema, {
+    method: 'POST',
+    body: { username_or_email: usernameOrEmail },
+  });
+}
+
+export function changePassword(
+  currentPassword: string,
+  newPassword: string,
+): Promise<AuthResult> {
+  return apiRequest('/sessions/password/change', authResultSchema, {
+    method: 'POST',
+    credentials: 'include',
+    body: {
+      current_password: currentPassword,
+      new_password: newPassword,
+      client_type: clientType,
+    },
+  });
 }
 
 export function logoutSessionForPlatform(
