@@ -1,6 +1,6 @@
 # Estado actual
 
-Última actualización: 2026-08-19.
+Última actualización: 2026-08-20.
 
 ## Release frontend 0.2.0
 
@@ -102,6 +102,14 @@
   local: ambas deben respetar el contrato IHAPI-F4-019 y conectarse luego al
   repositorio PostgreSQL durable. El fixture de una sola empresa se selecciona
   automáticamente, igual que el contrato objetivo.
+- Validación operativa puntual 2026-08-20: el backend desplegado en Buen Gusto
+  quedó en `v3.8.93` y el Development Build pudo iniciar sesión con el
+  administrador raíz a través del puente móvil habilitado explícitamente. La
+  corrección omite campos opcionales de empresa cuando todavía no existe una
+  empresa PostgreSQL asociada; no modifica pagos, consultas, ODBC, base de
+  datos ni el login web legado. Esta verificación habilita la prueba de sesión
+  móvil, pero no convierte al MVP en producción ni reemplaza la futura
+  autenticación multiempresa durable.
 
 ### 6. Staging y piloto
 
