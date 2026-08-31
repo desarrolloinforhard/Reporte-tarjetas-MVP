@@ -41,6 +41,7 @@ function SettingsContent({ compact = false }: { compact?: boolean }) {
   const [confirmPasswordVisible, setConfirmPasswordVisible] = useState(false);
   const [logoutConfirmVisible, setLogoutConfirmVisible] = useState(false);
   const hasThemeChanges = preference !== savedPreference;
+  const pilotMode = appEnvironment.name === 'production';
   const healthQuery = useQuery({
     queryKey: ['health'],
     queryFn: getHealth,
@@ -201,7 +202,7 @@ function SettingsContent({ compact = false }: { compact?: boolean }) {
             ['Estado de API', apiConnected ? healthQuery.data.status : 'No disponible'],
             ['Base de datos', databaseLabel],
             ['Última comprobación', checkedAt],
-            ['Actualización', 'Automática cada 5 segundos'],
+            ['Actualización', 'Al abrir o reintentar'],
             ['Plataformas', 'Web · Android · iOS'],
           ].map(([label, value]) => (
             <View key={label} style={[styles.detailRow, compact && styles.compactDetailRow, { borderBottomColor: colors.border }]}>
@@ -235,7 +236,7 @@ function SettingsContent({ compact = false }: { compact?: boolean }) {
         </Card>
 
         <Card
-          description="Sesión del ambiente aislado de desarrollo"
+          description={pilotMode ? 'Sesión del piloto de solo lectura' : 'Sesión del ambiente aislado de desarrollo'}
           style={{ ...styles.card, ...(compact ? styles.compactCard : {}) }}
           title="Cuenta">
           <View style={styles.account}>
@@ -257,7 +258,7 @@ function SettingsContent({ compact = false }: { compact?: boolean }) {
             <Button loading={loading} onPress={() => setLogoutConfirmVisible(true)} variant="danger">
               Cerrar sesión
             </Button>
-            <View style={[styles.technicalAccess, { borderTopColor: colors.border }]}>
+            {!pilotMode ? <View style={[styles.technicalAccess, { borderTopColor: colors.border }]}>
               <View style={styles.optionCopy}>
                 <Text style={[styles.optionTitle, { color: colors.text }]}>Seguridad de la cuenta</Text>
                 <Text style={[styles.optionDescription, { color: colors.textMuted }]}>Actualizá tu contraseña de acceso.</Text>
@@ -272,8 +273,8 @@ function SettingsContent({ compact = false }: { compact?: boolean }) {
                 variant="secondary">
                 {passwordFormVisible ? 'Cancelar' : 'Cambiar contraseña'}
               </Button>
-            </View>
-            {passwordFormVisible ? (
+            </View> : null}
+            {!pilotMode && passwordFormVisible ? (
               <View style={styles.passwordForm}>
                 <Text style={[styles.optionDescription, { color: colors.textMuted }]}>La nueva contraseña cierra las demás sesiones de esta cuenta.</Text>
                 <TextField
@@ -317,10 +318,10 @@ function SettingsContent({ compact = false }: { compact?: boolean }) {
                 </Button>
               </View>
             ) : null}
-            {passwordSaved ? (
+            {!pilotMode && passwordSaved ? (
               <Text style={[styles.optionDescription, { color: colors.success }]}>Contraseña actualizada correctamente.</Text>
             ) : null}
-            <View style={[styles.technicalAccess, { borderTopColor: colors.border }]}>
+            {!pilotMode ? <View style={[styles.technicalAccess, { borderTopColor: colors.border }]}>
               <View style={styles.optionCopy}>
                 <Text style={[styles.optionTitle, { color: colors.text }]}>Soporte técnico</Text>
                 <Text style={[styles.optionDescription, { color: colors.textMuted }]}>
@@ -333,17 +334,21 @@ function SettingsContent({ compact = false }: { compact?: boolean }) {
                 variant="secondary">
                 Entrar como técnico
               </Button>
-            </View>
+            </View> : (
+              <Text style={[styles.optionDescription, { color: colors.textMuted }]}>
+                La conexión y las credenciales del piloto son administradas fuera de la aplicación.
+              </Text>
+            )}
           </View>
         </Card>
-        <TechnicalSettingsModal
+        {!pilotMode ? <TechnicalSettingsModal
           onClose={() => setTechnicalVisible(false)}
           onSaved={(url) => {
             setConfiguredApiUrl(url);
             void queryClient.invalidateQueries();
           }}
           visible={technicalVisible}
-        />
+        /> : null}
         <Modal animationType="fade" onRequestClose={() => setLogoutConfirmVisible(false)} transparent visible={logoutConfirmVisible}>
           <View style={styles.confirmBackdrop}>
             <View style={[styles.confirmPanel, { backgroundColor: colors.surfaceElevated }]}>

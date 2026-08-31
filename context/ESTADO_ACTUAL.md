@@ -6,12 +6,21 @@
 
 - Decisión aceptada: la PWA será el canal principal del piloto de Buen Gusto y
   debe mostrar datos reales; no se presentarán fixtures como datos del cliente.
-- Preparación frontend iniciada: manifiesto web, metadatos de instalación,
-  íconos reutilizados y service worker que cachea exclusivamente la interfaz.
-  Las respuestas de API no se almacenan offline.
-- Pendiente antes de publicar: dominio HTTPS, proyecto de hosting, API de
-  Reportes separada y autenticada, cuenta ODBC limitada a `SELECT`, CORS
-  limitado al dominio final y validación contra el escritorio.
+- PWA publicada y verificada en Vercel: instalación disponible en móvil,
+  recargas de rutas válidas y navegación anónima estable en la raíz. El service
+  worker cachea exclusivamente la interfaz; las respuestas de API no se
+  almacenan offline.
+- Frontend preparado para el piloto: exige una API HTTPS remota bajo `/api/v1`,
+  ignora URLs técnicas guardadas en producción, informa configuración faltante
+  sin caer silenciosamente a localhost y presenta el ambiente como solo lectura.
+- Perfil backend preparado y validado localmente: archivo de entorno exclusivo,
+  variables ODBC `REPORTING_DB_*`, rechazo de credenciales legacy, identidad
+  `REPORTING_OWNER_*`, CORS HTTPS exacto, cookie segura y rutas de health/sync
+  compatibles con la PWA. No fue desplegado en Buen Gusto.
+- Pendiente para conectar datos reales: Infra debe crear y probar las dos
+  cuentas ODBC limitadas a `SELECT`, publicar el proceso reporting mediante
+  HTTPS y entregar su URL. Luego se configuran las variables públicas de Vercel
+  y se valida la paridad contra el escritorio.
 - La API operativa actual no se considerará backend público de la PWA: contiene
   capacidades ajenas a consulta. PostgreSQL continúa como trabajo paralelo para
   identidad, sesiones y auditoría durables.

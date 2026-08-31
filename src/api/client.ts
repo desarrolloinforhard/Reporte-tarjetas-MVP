@@ -2,6 +2,7 @@ import { z } from 'zod';
 
 import { ApiError } from '@/api/api-error';
 import { apiResponseSchema } from '@/api/api-response';
+import { appEnvironment } from '@/config/environment';
 import { getApiBaseUrl } from '@/config/runtime-api';
 import {
   getAccessToken,
@@ -24,6 +25,13 @@ export async function apiRequestWithMeta<T extends z.ZodType>(
   dataSchema: T,
   options: RequestOptions = {},
 ): Promise<ApiResult<z.infer<T>>> {
+  if (!appEnvironment.apiConfigured) {
+    throw new ApiError(
+      'API_NOT_CONFIGURED',
+      'La API HTTPS del piloto todavía no está configurada.',
+    );
+  }
+
   const { timeoutMs, signal: externalSignal, ...requestOptions } = options;
   const headers = new Headers(options.headers);
   headers.set('Accept', 'application/json');

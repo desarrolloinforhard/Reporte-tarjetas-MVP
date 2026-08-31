@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { FeedbackState } from '@/components/ui/feedback-state';
+import { appEnvironment } from '@/config/environment';
 import {
   DailyPayment,
   getDailyPayments,
@@ -122,6 +123,7 @@ export function DashboardScreen() {
   const { colors } = useAppTheme();
   const { width } = useWindowDimensions();
   const mobile = width < breakpoints.tablet;
+  const pilotMode = appEnvironment.name === 'production';
   const router = useRouter();
   const currentMonth = monthStart(startOfDay());
   const [period, setPeriod] = useState<Period>('today');
@@ -407,15 +409,15 @@ export function DashboardScreen() {
           ) : null}
 
           <Card
-            accessory={<Badge label="Operativo" tone="success" />}
+            accessory={<Badge label={pilotMode ? 'Solo lectura' : 'Operativo'} tone="success" />}
             description="Servicios requeridos por la aplicación"
             title="Estado del sistema">
             <View style={styles.systemGrid}>
               {[
-                ['API de desarrollo', 'Conectada'],
-                ['Base de datos', 'Aislada / sin ODBC'],
+                [pilotMode ? 'API de reportes' : 'API de desarrollo', 'Conectada'],
+                ['Base de datos', pilotMode ? 'Consulta / solo lectura' : 'Aislada / sin ODBC'],
                 ['Sincronización', dashboardQuery.data?.sync.overall_status || 'Sin datos'],
-                ['Actualización', 'Cada 5 segundos'],
+                ['Actualización', 'Bajo demanda'],
               ].map(([label, statusValue]) => (
                 <View
                   key={label}
@@ -433,18 +435,19 @@ export function DashboardScreen() {
           <View
             style={[styles.notice, { backgroundColor: colors.infoSoft, borderColor: colors.info }]}>
             <View style={[styles.noticeSymbol, { backgroundColor: colors.info }]}>
-              <Text style={styles.noticeSymbolText}>DEV</Text>
+              <Text style={styles.noticeSymbolText}>{pilotMode ? 'RO' : 'DEV'}</Text>
             </View>
             <View style={styles.noticeCopy}>
               <Text style={[styles.noticeTitle, { color: colors.text }]}>
-                Backend de desarrollo conectado
+                {pilotMode ? 'API de reportes conectada' : 'Backend de desarrollo conectado'}
               </Text>
               <Text style={[styles.noticeDescription, { color: colors.textMuted }]}>
-                Datos sintéticos del {formatDate(range.from)} al {formatDate(range.to)}.
-                {updatedAt ? ` Actualizado automáticamente a las ${updatedAt}.` : ''}
+                {pilotMode ? 'Datos de consulta' : 'Datos sintéticos'} del{' '}
+                {formatDate(range.from)} al {formatDate(range.to)}.
+                {updatedAt ? ` Consultado a las ${updatedAt}.` : ''}
               </Text>
             </View>
-            <Badge label="Ambiente seguro" tone="info" />
+            <Badge label={pilotMode ? 'Piloto controlado' : 'Ambiente seguro'} tone="info" />
           </View>
         </>
       ) : null}

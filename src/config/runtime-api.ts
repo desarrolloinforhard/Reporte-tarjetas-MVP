@@ -5,17 +5,28 @@ export type ApiMode = 'local' | 'lan' | 'remote';
 
 let runtimeApiBaseUrl = appEnvironment.apiBaseUrl;
 
+export function allowsStoredApiOverride(environmentName = appEnvironment.name) {
+  return environmentName !== 'production';
+}
+
 export function getApiBaseUrl() {
   return runtimeApiBaseUrl;
 }
 
 export async function initializeRuntimeApiBaseUrl() {
+  if (!allowsStoredApiOverride()) {
+    runtimeApiBaseUrl = appEnvironment.apiBaseUrl;
+    return runtimeApiBaseUrl;
+  }
   const stored = await getStoredApiBaseUrl();
   if (stored) runtimeApiBaseUrl = stored;
   return runtimeApiBaseUrl;
 }
 
 export async function saveRuntimeApiBaseUrl(value: string) {
+  if (!allowsStoredApiOverride()) {
+    throw new Error('La URL de la API de producción sólo puede definirse durante el despliegue.');
+  }
   runtimeApiBaseUrl = value;
   await setStoredApiBaseUrl(value);
 }
