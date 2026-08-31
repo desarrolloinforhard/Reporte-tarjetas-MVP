@@ -1,6 +1,20 @@
 # Estado actual
 
-Última actualización: 2026-08-20.
+Última actualización: 2026-08-31.
+
+## PWA de Buen Gusto en modo consulta
+
+- Decisión aceptada: la PWA será el canal principal del piloto de Buen Gusto y
+  debe mostrar datos reales; no se presentarán fixtures como datos del cliente.
+- Preparación frontend iniciada: manifiesto web, metadatos de instalación,
+  íconos reutilizados y service worker que cachea exclusivamente la interfaz.
+  Las respuestas de API no se almacenan offline.
+- Pendiente antes de publicar: dominio HTTPS, proyecto de hosting, API de
+  Reportes separada y autenticada, cuenta ODBC limitada a `SELECT`, CORS
+  limitado al dominio final y validación contra el escritorio.
+- La API operativa actual no se considerará backend público de la PWA: contiene
+  capacidades ajenas a consulta. PostgreSQL continúa como trabajo paralelo para
+  identidad, sesiones y auditoría durables.
 
 ## Release frontend 0.2.0
 

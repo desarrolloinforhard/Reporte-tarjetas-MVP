@@ -52,6 +52,13 @@ export default function RootLayout() {
     return () => subscription.remove();
   }, []);
 
+  useEffect(() => {
+    if (Platform.OS !== 'web' || !('serviceWorker' in navigator)) return;
+    void navigator.serviceWorker.register('/service-worker.js').catch(() => {
+      // La aplicación sigue siendo utilizable si el navegador bloquea el worker.
+    });
+  }, []);
+
   if (!runtimeReady) {
     return <View style={styles.loading}><ActivityIndicator size="large" /></View>;
   }

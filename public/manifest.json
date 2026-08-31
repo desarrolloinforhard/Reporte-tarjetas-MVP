@@ -1,0 +1,20 @@
+{
+  "name": "Reportes de Tarjetas",
+  "short_name": "Reportes",
+  "description": "Reportes de tarjetas para clientes de Inforhard S.R.L.",
+  "id": "/",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#E8F5EE",
+  "theme_color": "#008A46",
+  "lang": "es-AR",
+  "icons": [
+    {
+      "src": "/icons/icon-256.png",
+      "sizes": "256x256",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
