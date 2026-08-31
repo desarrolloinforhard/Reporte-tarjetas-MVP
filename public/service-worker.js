@@ -1,4 +1,4 @@
-const CACHE_NAME = 'reportes-tarjetas-shell-v1';
+const CACHE_NAME = 'reportes-tarjetas-shell-v2';
 const APP_SHELL = ['/', '/manifest.json', '/icons/icon-256.png', '/icons/apple-touch-icon.png'];
 
 self.addEventListener('install', (event) => {
@@ -27,8 +27,12 @@ self.addEventListener('fetch', (event) => {
     event.respondWith(
       fetch(request)
         .then((response) => {
-          const copy = response.clone();
-          void caches.open(CACHE_NAME).then((cache) => cache.put('/', copy));
+          // Una respuesta de Vercel con error (por ejemplo, 404 de protección)
+          // no debe reemplazar el shell correcto que usamos como respaldo offline.
+          if (response.ok) {
+            const copy = response.clone();
+            void caches.open(CACHE_NAME).then((cache) => cache.put('/', copy));
+          }
           return response;
         })
         .catch(() => caches.match('/'))

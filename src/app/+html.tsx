@@ -18,8 +18,23 @@ export default function RootHtml({ children }: PropsWithChildren) {
           dangerouslySetInnerHTML={{
             __html: `(() => {
               try {
-                const token = new URLSearchParams(window.location.search).get('_vercel_share');
-                if (token) window.sessionStorage.setItem('_vercel_share', token);
+                const shareKey = '_vercel_share';
+                const token = new URLSearchParams(window.location.search).get(shareKey);
+                if (token) window.sessionStorage.setItem(shareKey, token);
+
+                const sharedToken = window.sessionStorage.getItem(shareKey);
+                if (!sharedToken) return;
+
+                const sharedRoot = () => '/?' + shareKey + '=' + encodeURIComponent(sharedToken);
+                for (const method of ['pushState', 'replaceState']) {
+                  const original = window.history[method];
+                  window.history[method] = function(state, title, url) {
+                    if (url && new URL(String(url), window.location.origin).origin === window.location.origin) {
+                      return original.call(window.history, state, title, sharedRoot());
+                    }
+                    return original.call(window.history, state, title, url);
+                  };
+                }
               } catch (_) {}
             })();`
           }}
