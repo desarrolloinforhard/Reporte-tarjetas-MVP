@@ -14,6 +14,16 @@ export default function RootHtml({ children }: PropsWithChildren) {
         <meta name="apple-mobile-web-app-title" content="Reportes" />
         <link rel="manifest" href="/manifest.json" />
         <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(() => {
+              try {
+                const token = new URLSearchParams(window.location.search).get('_vercel_share');
+                if (token) window.sessionStorage.setItem('_vercel_share', token);
+              } catch (_) {}
+            })();`
+          }}
+        />
         <ScrollViewStyleReset />
       </head>
       <body>{children}</body>
