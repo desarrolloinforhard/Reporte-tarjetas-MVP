@@ -1,6 +1,6 @@
 # ADR-006: PWA como canal del piloto de solo lectura
 
-**Fecha:** 2026-08-31  
+**Fecha:** 2026-08-31
 **Estado:** Aceptada
 
 ## Contexto
