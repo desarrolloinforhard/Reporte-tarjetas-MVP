@@ -1,5 +1,5 @@
 import { focusManager, QueryClientProvider } from '@tanstack/react-query';
-import { Stack, usePathname } from 'expo-router';
+import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, AppState, Platform, StyleSheet, View } from 'react-native';
@@ -7,6 +7,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { queryClient } from '@/config/query-client';
 import { initializeRuntimeApiBaseUrl } from '@/config/runtime-api';
+import { LoginScreen } from '@/features/auth/login-screen';
 import { SessionProvider, useSession } from '@/features/auth/session-provider';
 import { AppThemeProvider, useAppTheme } from '@/theme/theme-provider';
 
@@ -19,6 +20,18 @@ function RootNavigator() {
       <View style={styles.loading}>
         <ActivityIndicator size="large" />
       </View>
+    );
+  }
+
+  // En la web, mantener el acceso anónimo en la URL solicitada. Esto evita que
+  // Expo Router reemplace `/` por `/sign-in`, lo que rompería los enlaces
+  // compartidos y las recargas protegidas por Vercel.
+  if (Platform.OS === 'web' && !authenticated) {
+    return (
+      <>
+        <StatusBar style={isDark ? 'light' : 'dark'} />
+        <LoginScreen />
+      </>
     );
   }
 
@@ -39,7 +52,6 @@ function RootNavigator() {
 
 export default function RootLayout() {
   const [runtimeReady, setRuntimeReady] = useState(false);
-  const pathname = usePathname();
 
   useEffect(() => {
     void initializeRuntimeApiBaseUrl().finally(() => setRuntimeReady(true));
@@ -59,27 +71,6 @@ export default function RootLayout() {
       // La aplicación sigue siendo utilizable si el navegador bloquea el worker.
     });
   }, []);
-
-  useEffect(() => {
-    if (Platform.OS !== 'web') return;
-
-    const shareKey = '_vercel_share';
-    const currentUrl = new URL(window.location.href);
-    const incomingShareToken = currentUrl.searchParams.get(shareKey);
-    if (incomingShareToken) {
-      window.sessionStorage.setItem(shareKey, incomingShareToken);
-    }
-
-    const shareToken = window.sessionStorage.getItem(shareKey);
-    if (!shareToken || (currentUrl.pathname === '/' && incomingShareToken === shareToken)) return;
-
-    // Los Shareable Links de Vercel quedan asociados a la URL que los creó.
-    // Expo Router navega a /sign-in al iniciar una sesión anónima; conservar la
-    // URL raíz evita que una recarga pierda el permiso temporal del enlace.
-    const sharedRootUrl = new URL(window.location.origin);
-    sharedRootUrl.searchParams.set(shareKey, shareToken);
-    window.history.replaceState(null, '', `${sharedRootUrl.pathname}${sharedRootUrl.search}`);
-  }, [pathname]);
 
   if (!runtimeReady) {
     return <View style={styles.loading}><ActivityIndicator size="large" /></View>;
