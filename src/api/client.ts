@@ -35,6 +35,10 @@ export async function apiRequestWithMeta<T extends z.ZodType>(
   const { timeoutMs, signal: externalSignal, ...requestOptions } = options;
   const headers = new Headers(options.headers);
   headers.set('Accept', 'application/json');
+  // El Gateway transitorio usa un dominio gratuito de ngrok. La cabecera viaja
+  // a traves del rewrite de Vercel y evita que ngrok reemplace el JSON por su
+  // interstitial HTML (ERR_NGROK_6024).
+  headers.set('ngrok-skip-browser-warning', '1');
 
   if (options.body !== undefined) {
     headers.set('Content-Type', 'application/json');

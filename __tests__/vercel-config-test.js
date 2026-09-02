@@ -21,4 +21,23 @@ describe('Vercel reporting gateway', () => {
       ]
     });
   });
+
+  it('incorpora la API publica y omite el interstitial de ngrok', () => {
+    const productionEnv = fs.readFileSync(
+      path.join(process.cwd(), '.env.production'),
+      'utf8'
+    );
+    const apiClient = fs.readFileSync(
+      path.join(process.cwd(), 'src', 'api', 'client.ts'),
+      'utf8'
+    );
+
+    expect(productionEnv).toContain(
+      'EXPO_PUBLIC_API_URL_WEB=https://reporte-tarjetas-inforhard.vercel.app/api/v1'
+    );
+    expect(productionEnv).toContain('EXPO_PUBLIC_APP_ENV=production');
+    expect(apiClient).toContain(
+      "headers.set('ngrok-skip-browser-warning', '1')"
+    );
+  });
 });

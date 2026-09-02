@@ -79,6 +79,10 @@ El deployment de Vercel debe reenviar sin cachear:
   -> https://stable-heartily-squirrel.ngrok-free.app/reporting/api/v1/*
 ```
 
+Mientras el Gateway use el dominio gratuito de ngrok, el cliente envía
+`ngrok-skip-browser-warning: 1`. Sin esa cabecera, ngrok puede responder
+`ERR_NGROK_6024` con HTML y romper el contrato JSON.
+
 Estado: el rewrite y `Cache-Control: no-store` ya están versionados en
 `vercel.json`. Esto no demuestra que estén desplegados; se debe redeplegar y
 validar la sesión completa desde un navegador del piloto.

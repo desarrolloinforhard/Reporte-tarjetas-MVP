@@ -37,6 +37,7 @@ yarn-error.*
 !.env.example
 !.env.staging.example
 !.env.pilot.example
+!.env.production
 .env_*.local
 
 # typescript
