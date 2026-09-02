@@ -47,7 +47,11 @@ describe('API de autenticación web', () => {
     expect(mockedApiRequest).toHaveBeenCalledWith(
       '/sessions/current',
       expect.anything(),
-      { credentials: 'include', timeoutMs: 8_000 },
+      {
+        credentials: 'include',
+        suppressUnauthenticatedNotification: true,
+        timeoutMs: 8_000,
+      },
     );
 
     mockedApiRequest.mockResolvedValueOnce({} as never);
@@ -56,7 +60,11 @@ describe('API de autenticación web', () => {
     expect(mockedApiRequest).toHaveBeenCalledWith(
       '/users/me',
       expect.anything(),
-      { credentials: 'include', timeoutMs: 8_000 },
+      {
+        credentials: 'include',
+        suppressUnauthenticatedNotification: true,
+        timeoutMs: 8_000,
+      },
     );
   });
 

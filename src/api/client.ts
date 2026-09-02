@@ -11,6 +11,7 @@ import {
 
 type RequestOptions = Omit<RequestInit, 'body'> & {
   body?: unknown;
+  suppressUnauthenticatedNotification?: boolean;
   token?: string;
   timeoutMs?: number;
 };
@@ -32,7 +33,12 @@ export async function apiRequestWithMeta<T extends z.ZodType>(
     );
   }
 
-  const { timeoutMs, signal: externalSignal, ...requestOptions } = options;
+  const {
+    suppressUnauthenticatedNotification = false,
+    timeoutMs,
+    signal: externalSignal,
+    ...requestOptions
+  } = options;
   const headers = new Headers(options.headers);
   headers.set('Accept', 'application/json');
   // El Gateway transitorio usa un dominio gratuito de ngrok. La cabecera viaja
@@ -92,7 +98,11 @@ export async function apiRequestWithMeta<T extends z.ZodType>(
 
   if (!envelope.ok && envelope.error) {
     const isLoginRequest = path === '/auth/login' || path === '/sessions/login';
-    if (envelope.error.code === 'UNAUTHENTICATED' && !isLoginRequest) {
+    if (
+      envelope.error.code === 'UNAUTHENTICATED'
+      && !isLoginRequest
+      && !suppressUnauthenticatedNotification
+    ) {
       notifyUnauthenticated();
     }
     throw new ApiError(

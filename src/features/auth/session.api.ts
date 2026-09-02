@@ -19,6 +19,7 @@ const sessionRestoreTimeoutMs = 8_000;
 export function getCurrentSession(): Promise<CurrentSession> {
   return apiRequest('/sessions/current', currentSessionSchema, {
     credentials: 'include',
+    suppressUnauthenticatedNotification: true,
     timeoutMs: sessionRestoreTimeoutMs,
   });
 }
@@ -26,6 +27,7 @@ export function getCurrentSession(): Promise<CurrentSession> {
 export function getCurrentUser(): Promise<CurrentUser> {
   return apiRequest('/users/me', currentUserSchema, {
     credentials: 'include',
+    suppressUnauthenticatedNotification: true,
     timeoutMs: sessionRestoreTimeoutMs,
   });
 }
