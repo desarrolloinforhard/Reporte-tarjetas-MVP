@@ -1,5 +1,5 @@
 import { createContext, PropsWithChildren, useContext, useEffect, useMemo, useState } from 'react';
-import { Platform } from 'react-native';
+import { AppState, Platform } from 'react-native';
 
 import { ApiError } from '@/api/api-error';
 import { queryClient } from '@/config/query-client';
@@ -7,6 +7,10 @@ import {
   setAccessToken,
   subscribeToUnauthenticated,
 } from '@/features/auth/auth-token-store';
+import {
+  getLoginCooldownDeadline,
+  getLoginCooldownRemainingSeconds,
+} from '@/features/auth/login-cooldown';
 import {
   getCurrentSession,
   getCurrentUser,
@@ -43,6 +47,7 @@ export function SessionProvider({ children }: PropsWithChildren) {
   const [loading, setLoading] = useState(true);
   const [loginPending, setLoginPending] = useState(false);
   const [loginCooldownSeconds, setLoginCooldownSeconds] = useState(0);
+  const [loginCooldownUntilMs, setLoginCooldownUntilMs] = useState<number | null>(null);
   const [loginError, setLoginError] = useState<string | null>(null);
   const [session, setSession] = useState<CurrentSession | null>(null);
   const [user, setUser] = useState<CurrentUser | null>(null);
@@ -53,6 +58,8 @@ export function SessionProvider({ children }: PropsWithChildren) {
     await setStoredSessionMarker(true);
     setSession(result.session);
     setUser(result.user);
+    setLoginCooldownUntilMs(null);
+    setLoginCooldownSeconds(0);
   }
 
   async function clearSession() {
@@ -152,12 +159,29 @@ export function SessionProvider({ children }: PropsWithChildren) {
   }, [session?.expires_at]);
 
   useEffect(() => {
-    if (loginCooldownSeconds <= 0) return;
-    const timer = setTimeout(() => {
-      setLoginCooldownSeconds((seconds) => Math.max(0, seconds - 1));
-    }, 1000);
-    return () => clearTimeout(timer);
-  }, [loginCooldownSeconds]);
+    if (loginCooldownUntilMs === null) return;
+
+    const refreshCooldown = () => {
+      const remaining = getLoginCooldownRemainingSeconds(loginCooldownUntilMs);
+      setLoginCooldownSeconds(remaining);
+      if (remaining === 0) {
+        setLoginCooldownUntilMs((current) =>
+          current === loginCooldownUntilMs ? null : current,
+        );
+      }
+    };
+
+    refreshCooldown();
+    const timer = setInterval(refreshCooldown, 1000);
+    const subscription = AppState.addEventListener('change', (nextState) => {
+      if (nextState === 'active') refreshCooldown();
+    });
+
+    return () => {
+      clearInterval(timer);
+      subscription.remove();
+    };
+  }, [loginCooldownUntilMs]);
 
   const value = useMemo<SessionContextValue>(
     () => ({
@@ -185,8 +209,12 @@ export function SessionProvider({ children }: PropsWithChildren) {
                 : 'No se pudo iniciar sesión. Volvé a intentarlo.'
             : 'No se pudo iniciar sesión. Volvé a intentarlo.';
           setLoginError(message);
-          if (Number.isFinite(retryAfterSeconds) && retryAfterSeconds > 0) {
-            setLoginCooldownSeconds(Math.ceil(retryAfterSeconds));
+          const cooldownDeadline = getLoginCooldownDeadline(retryAfterSeconds);
+          if (cooldownDeadline !== null) {
+            setLoginCooldownUntilMs(cooldownDeadline);
+            setLoginCooldownSeconds(
+              getLoginCooldownRemainingSeconds(cooldownDeadline),
+            );
           }
           throw error;
         } finally {
