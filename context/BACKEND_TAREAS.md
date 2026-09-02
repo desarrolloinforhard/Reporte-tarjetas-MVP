@@ -27,6 +27,9 @@ Este archivo coordina necesidades del frontend universal. La implementación ocu
 | BE-015 | Detectar duplicados automáticos solo por proveedor e ID externo exacto | disponible_desarrollo | Nicolás/Misael | Evita falsos positivos |
 | BE-016 | Validar filtros, paginación y relaciones en staging/réplica autorizada | pendiente | Nicolás/Misael | Sin producción |
 | BE-017 | Medir y optimizar endpoints de Calidad y Conciliación | disponible_desarrollo | Nicolás/Misael | Caché acotada y referencias exactas |
+| BE-018 | Alinear `webserver-reporting-app` al puerto interno `5001` | disponible_desarrollo | Misael | Configuración y pruebas aprobadas; runtime pendiente |
+| BE-019 | Implementar Gateway cerrado en `5000` para `/reporting/api/v1/*` | disponible_desarrollo | Misael | Proxy, sesion, errores y health aprobados localmente; falta despliegue |
+| BE-020 | Validar ngrok, rewrite Vercel, sesión y rollback del Gateway | en_progreso | Nicolás/Misael | Rewrite y no-cache versionados; faltan deployment, sesión real y rollback en laboratorio |
 
 La autorizacion objetivo del MVP es una cuenta propietaria con consulta integral
 de todas las sucursales. `BE-005` no requiere una matriz compleja de roles en la
@@ -59,6 +62,32 @@ Prioridad:
 ## Regla de cierre
 
 Una tarea no está terminada hasta documentar contrato, pruebas, ambiente validado, impacto en ambos frontends y estrategia de despliegue. “Funciona localmente” no autoriza producción.
+
+## Gateway de Reporting acordado el 2026-09-01
+
+- Ngrok mantiene una sola entrada HTTPS hacia `paquete-webserver-api:5000`.
+- `webserver-reporting-app` adopta `127.0.0.1:5001`; el puerto `5100` queda
+  reemplazado para este paquete.
+- La ruta pública planificada es `/reporting/api/v1/*`; el Gateway elimina el
+  prefijo y reenvía a `/api/v1/*` de Reporting.
+- `clover-token-service:5011` y `clover-token-reauth:5012` continúan privados,
+  administrados por PM2 y sin rutas públicas.
+- Vercel conservará `/api/v1/*` mediante rewrite HTTPS hacia el prefijo de
+  Reporting del dominio ngrok.
+- Backend completo BE-018 y BE-019 en desarrollo. Frontend puede preparar
+  BE-020, pero la prueba real comienza cuando Operaciones habilite ambos flags,
+  levante PM2 y confirme ngrok en el host autorizado.
+
+Contrato disponible en desarrollo:
+
+```text
+GET  /gateway/health
+ANY  /reporting/api/v1/* -> webserver-reporting-app /api/v1/*
+```
+
+El Gateway conserva query, cuerpos, cookies, `Set-Cookie`, estados y
+`X-Request-Id`. El destino es fijo `127.0.0.1:5001`; no existen rutas Gateway
+para Token Service ni Recovery. La PWA no debe llamar directamente a `5001`.
 
 ## Estado vigente de BE-002
 

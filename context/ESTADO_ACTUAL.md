@@ -1,6 +1,6 @@
 # Estado actual
 
-Última actualización: 2026-08-31.
+Última actualización: 2026-09-02.
 
 ## PWA de Buen Gusto en modo consulta
 
@@ -21,6 +21,12 @@
   cuentas ODBC limitadas a `SELECT`, publicar el proceso reporting mediante
   HTTPS y entregar su URL. Luego se configuran las variables públicas de Vercel
   y se valida la paridad contra el escritorio.
+- Arquitectura de conexión acordada: ngrok conserva HTTPS hacia `5000`, un
+  Gateway transitorio reenvía `/reporting/api/v1/*` y Reporting escucha sólo en
+  `127.0.0.1:5001`. Gateway, puerto, tools ecosystem y pruebas de contrato ya
+  están implementados en desarrollo. El rewrite Vercel y la política no-cache
+  ya están versionados; faltan instalación de laboratorio, firewall, ngrok,
+  deployment del rewrite y sesión real antes del piloto.
 - La API operativa actual no se considerará backend público de la PWA: contiene
   capacidades ajenas a consulta. PostgreSQL continúa como trabajo paralelo para
   identidad, sesiones y auditoría durables.

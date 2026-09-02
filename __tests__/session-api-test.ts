@@ -1,6 +1,8 @@
 import { apiRequest } from '@/api/client';
 import {
   changePassword,
+  getCurrentSession,
+  getCurrentUser,
   loginForPlatform,
   logoutSessionForPlatform,
   requestPasswordReset,
@@ -34,6 +36,27 @@ describe('API de autenticación web', () => {
           client_type: 'web',
         },
       },
+    );
+  });
+
+  test('limita el tiempo de restauración para no bloquear el inicio si la API guardada no responde', async () => {
+    mockedApiRequest.mockResolvedValueOnce({} as never);
+
+    await getCurrentSession();
+
+    expect(mockedApiRequest).toHaveBeenCalledWith(
+      '/sessions/current',
+      expect.anything(),
+      { credentials: 'include', timeoutMs: 8_000 },
+    );
+
+    mockedApiRequest.mockResolvedValueOnce({} as never);
+    await getCurrentUser();
+
+    expect(mockedApiRequest).toHaveBeenCalledWith(
+      '/users/me',
+      expect.anything(),
+      { credentials: 'include', timeoutMs: 8_000 },
     );
   });
 

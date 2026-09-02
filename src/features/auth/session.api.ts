@@ -12,16 +12,21 @@ import {
 import { Platform } from 'react-native';
 
 const clientType = Platform.OS === 'web' ? 'web' : 'native';
+// La restauración ocurre antes de renderizar la pantalla de acceso. Nunca debe
+// quedar bloqueada si una URL guardada ya no responde desde el dispositivo.
+const sessionRestoreTimeoutMs = 8_000;
 
 export function getCurrentSession(): Promise<CurrentSession> {
   return apiRequest('/sessions/current', currentSessionSchema, {
     credentials: 'include',
+    timeoutMs: sessionRestoreTimeoutMs,
   });
 }
 
 export function getCurrentUser(): Promise<CurrentUser> {
   return apiRequest('/users/me', currentUserSchema, {
     credentials: 'include',
+    timeoutMs: sessionRestoreTimeoutMs,
   });
 }
 
@@ -62,6 +67,7 @@ export function refreshSession(refreshToken?: string | null): Promise<AuthResult
   return apiRequest('/sessions/refresh', authResultSchema, {
     method: 'POST',
     credentials: 'include',
+    timeoutMs: sessionRestoreTimeoutMs,
     body: {
       client_type: clientType,
       ...(refreshToken ? { refresh_token: refreshToken } : {}),
