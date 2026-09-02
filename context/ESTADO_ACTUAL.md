@@ -13,20 +13,19 @@
 - Frontend preparado para el piloto: exige una API HTTPS remota bajo `/api/v1`,
   ignora URLs técnicas guardadas en producción, informa configuración faltante
   sin caer silenciosamente a localhost y presenta el ambiente como solo lectura.
-- Perfil backend preparado y validado localmente: archivo de entorno exclusivo,
-  variables ODBC `REPORTING_DB_*`, rechazo de credenciales legacy, identidad
-  `REPORTING_OWNER_*`, CORS HTTPS exacto, cookie segura y rutas de health/sync
-  compatibles con la PWA. No fue desplegado en Buen Gusto.
-- Pendiente para conectar datos reales: Infra debe crear y probar las dos
-  cuentas ODBC limitadas a `SELECT`, publicar el proceso reporting mediante
-  HTTPS y entregar su URL. Luego se configuran las variables públicas de Vercel
-  y se valida la paridad contra el escritorio.
+- Backend v3.11.36 desplegado en Buen Gusto: Reporting reutiliza el `.env`, la
+  configuración de base y `ROOT_ADMIN_*` del tronco, pero corre como proceso
+  separado de solo lectura. Health público, base conectada, CORS, preflight y
+  protección de rutas fueron verificados el 02/09/2026.
+- Vercel reenvía `/api/v1/*` al Gateway de Buen Gusto en
+  `https://inforhardapi-buengusto.ngrok.app/reporting/api/v1/*`. Resta validar
+  login y paridad funcional con credenciales del cliente desde el navegador.
 - Arquitectura de conexión acordada: ngrok conserva HTTPS hacia `5000`, un
   Gateway transitorio reenvía `/reporting/api/v1/*` y Reporting escucha sólo en
   `127.0.0.1:5001`. Gateway, puerto, tools ecosystem y pruebas de contrato ya
   están implementados en desarrollo. El rewrite Vercel y la política no-cache
   ya están versionados; faltan instalación de laboratorio, firewall, ngrok,
-  deployment del rewrite y sesión real antes del piloto.
+  sesión real y paridad de datos antes del piloto.
 - La API operativa actual no se considerará backend público de la PWA: contiene
   capacidades ajenas a consulta. PostgreSQL continúa como trabajo paralelo para
   identidad, sesiones y auditoría durables.

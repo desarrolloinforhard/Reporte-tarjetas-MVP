@@ -9,7 +9,7 @@ describe('Vercel reporting gateway', () => {
 
     expect(config.rewrites).toContainEqual({
       source: '/api/v1/:path*',
-      destination: 'https://stable-heartily-squirrel.ngrok-free.app/reporting/api/v1/:path*'
+      destination: 'https://inforhardapi-buengusto.ngrok.app/reporting/api/v1/:path*'
     });
     expect(config.headers).toContainEqual({
       source: '/api/v1/:path*',

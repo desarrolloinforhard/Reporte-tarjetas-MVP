@@ -12,8 +12,8 @@ Conectar la PWA publicada en Vercel exclusivamente con el proceso
 1. Infra crea cuentas distintas para tarjetas y central con privilegio
    `SELECT` únicamente y conserva evidencia de que `INSERT`, `UPDATE`,
    `DELETE` y DDL son rechazados.
-2. En el host autorizado se crea `.env.reporting` a partir de
-   `.env.reporting.example`; los secretos nunca se copian a este repositorio.
+2. En el host autorizado se utiliza el único `.env` troncal de
+   `paquete-webserver`; los secretos nunca se copian a este repositorio.
 3. El proceso se inicia con `packages/webserver-reporting-app/src/server.js`,
    escucha solamente en `127.0.0.1:5001` y conserva logs propios.
 4. El Gateway transitorio en `5000` publica `/reporting/api/v1/*`. Ngrok
@@ -31,7 +31,6 @@ En el `.env` principal del host se requieren estos flags operativos:
 ```text
 ENABLE_REPORTING_APP=true
 ENABLE_REPORTING_GATEWAY=true
-REPORTING_ENV_FILE=.env.reporting
 REPORTING_GATEWAY_TIMEOUT_MS=30000
 REPORTING_GATEWAY_HEALTH_TIMEOUT_MS=2000
 ```
@@ -76,19 +75,21 @@ El deployment de Vercel debe reenviar sin cachear:
 
 ```text
 /api/v1/*
-  -> https://stable-heartily-squirrel.ngrok-free.app/reporting/api/v1/*
+  -> https://inforhardapi-buengusto.ngrok.app/reporting/api/v1/*
 ```
 
 Mientras el Gateway use el dominio gratuito de ngrok, el cliente envía
 `ngrok-skip-browser-warning: 1`. Sin esa cabecera, ngrok puede responder
 `ERR_NGROK_6024` con HTML y romper el contrato JSON.
 
-Estado: el rewrite y `Cache-Control: no-store` ya están versionados en
-`vercel.json`. Esto no demuestra que estén desplegados; se debe redeplegar y
-validar la sesión completa desde un navegador del piloto.
+Estado: Buen Gusto expone `reporting-api` v3.11.36 en modo `read_only`, con la
+base conectada y CORS autorizado para la PWA. El rewrite y
+`Cache-Control: no-store` están versionados en `vercel.json`; resta validar la
+sesión completa y la paridad funcional desde un navegador del piloto.
 
-Validación local del 2026-09-02: `npm run check` aprobó lint, TypeScript y
-55/55 pruebas, incluida la protección automatizada del rewrite.
+Validación del 2026-09-02: `npm run check` aprobó lint, TypeScript y 56/56
+pruebas, incluida la protección automatizada del rewrite. El backend v3.11.36
+aprobó sus 70 pruebas.
 
 El dominio ngrok no se configura con un punto final. El Gateway usa un destino
 interno fijo `http://127.0.0.1:5001` y nunca acepta una URL aportada por el
