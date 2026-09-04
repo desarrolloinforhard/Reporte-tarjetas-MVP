@@ -9,6 +9,7 @@ import { queryClient } from '@/config/query-client';
 import { initializeRuntimeApiBaseUrl } from '@/config/runtime-api';
 import { LoginScreen } from '@/features/auth/login-screen';
 import { SessionProvider, useSession } from '@/features/auth/session-provider';
+import { PwaInstallPrompt } from '@/features/install/pwa-install-prompt';
 import { AppThemeProvider, useAppTheme } from '@/theme/theme-provider';
 
 function RootNavigator() {
@@ -82,6 +83,7 @@ export default function RootLayout() {
         <QueryClientProvider client={queryClient}>
           <SessionProvider>
             <RootNavigator />
+            <PwaInstallPrompt />
           </SessionProvider>
         </QueryClientProvider>
       </AppThemeProvider>

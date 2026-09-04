@@ -46,6 +46,8 @@ export const helpSections: HelpSection[] = [
       { type: 'paragraph', text: 'Reportes de Tarjetas es una aplicación web instalable. Una vez instalada, se abre desde un ícono como cualquier otra aplicación.' },
       { type: 'heading', text: 'En Android' },
       { type: 'steps', items: ['Abrí el enlace en Chrome.', 'Cuando aparezca el aviso Instalar Reportes de Tarjetas, presioná Instalar.', 'Esperá a que termine la instalación.', 'Abrí la aplicación desde el ícono agregado al teléfono.'] },
+      { type: 'heading', text: 'En iPhone o iPad' },
+      { type: 'steps', items: ['Abrí el enlace en Safari.', 'Tocá Compartir.', 'Elegí Agregar a Inicio.', 'Activá Abrir como app web y tocá Agregar.'] },
       { type: 'heading', text: 'En una computadora' },
       { type: 'paragraph', text: 'Cuando el navegador muestre el ícono de instalación en la barra de direcciones:' },
       { type: 'steps', items: ['Presioná el ícono.', 'Seleccioná Instalar.', 'La aplicación se abrirá en una ventana independiente.'] },

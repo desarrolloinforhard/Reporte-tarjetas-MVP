@@ -11,6 +11,10 @@
   fijo el índice horizontal mientras se recorre el manual.
 - Sus 16 secciones funcionan con los temas claro y oscuro y permanecen
   disponibles dentro del paquete de la PWA.
+- Después de un inicio de sesión web exitoso, los dispositivos que todavía
+  no ejecutan la PWA instalada reciben un aviso compacto con el logo. Chromium
+  abre el instalador nativo cuando está disponible; iPhone/iPad muestran el
+  recorrido de Safari para agregarla a Inicio.
 
 ## PWA de Buen Gusto en modo consulta
 

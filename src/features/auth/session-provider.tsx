@@ -30,6 +30,7 @@ import {
 
 type SessionContextValue = {
   authenticated: boolean;
+  loginSucceededAt: number | null;
   loading: boolean;
   loginPending: boolean;
   loginCooldownSeconds: number;
@@ -45,6 +46,7 @@ const SessionContext = createContext<SessionContextValue | null>(null);
 
 export function SessionProvider({ children }: PropsWithChildren) {
   const [loading, setLoading] = useState(true);
+  const [loginSucceededAt, setLoginSucceededAt] = useState<number | null>(null);
   const [loginPending, setLoginPending] = useState(false);
   const [loginCooldownSeconds, setLoginCooldownSeconds] = useState(0);
   const [loginCooldownUntilMs, setLoginCooldownUntilMs] = useState<number | null>(null);
@@ -68,6 +70,7 @@ export function SessionProvider({ children }: PropsWithChildren) {
     await setStoredSessionMarker(false);
     setSession(null);
     setUser(null);
+    setLoginSucceededAt(null);
     queryClient.clear();
   }
 
@@ -186,6 +189,7 @@ export function SessionProvider({ children }: PropsWithChildren) {
   const value = useMemo<SessionContextValue>(
     () => ({
       authenticated: Boolean(session && user),
+      loginSucceededAt,
       loading,
       loginPending,
       loginCooldownSeconds,
@@ -197,6 +201,7 @@ export function SessionProvider({ children }: PropsWithChildren) {
         setLoginError(null);
         try {
           await applyAuthResult(await loginRequest(username, password));
+          setLoginSucceededAt(Date.now());
         } catch (error) {
           const retryAfterSeconds = error instanceof ApiError
             ? Number(error.meta.retry_after_seconds)
@@ -235,7 +240,7 @@ export function SessionProvider({ children }: PropsWithChildren) {
         }
       },
     }),
-    [loading, loginCooldownSeconds, loginError, loginPending, session, user],
+    [loading, loginCooldownSeconds, loginError, loginPending, loginSucceededAt, session, user],
   );
 
   return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>;
