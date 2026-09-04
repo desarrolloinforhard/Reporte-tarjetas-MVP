@@ -76,7 +76,11 @@ export function HelpScreen() {
       contentContainerStyle={desktop ? styles.desktopIndexContent : styles.mobileIndexContent}
       horizontal={!desktop}
       showsHorizontalScrollIndicator={false}
-      style={desktop ? [styles.desktopIndex, { backgroundColor: colors.surface, borderColor: colors.border }] : styles.mobileIndex}>
+      style={
+        desktop
+          ? [styles.desktopIndex, { backgroundColor: colors.surface, borderColor: colors.border }]
+          : [styles.mobileIndex, { backgroundColor: colors.surface, borderColor: colors.border }]
+      }>
       {desktop ? (
         <View style={styles.indexHeading}>
           <Text style={[styles.indexTitle, { color: colors.text }]}>Guía de uso</Text>
@@ -120,8 +124,8 @@ export function HelpScreen() {
   );
 
   return (
-    <View style={[styles.root, { backgroundColor: colors.background }]}>
-      {desktop ? index : null}
+    <View style={[styles.root, !desktop && styles.mobileRoot, { backgroundColor: colors.background }]}>
+      {index}
       <ScrollView
         contentContainerStyle={styles.mainContent}
         onScroll={(event) => {
@@ -136,7 +140,6 @@ export function HelpScreen() {
         scrollEventThrottle={100}
         style={styles.mainScroll}>
         <View style={styles.guideColumn}>
-          {!desktop ? index : null}
           <View style={styles.hero}>
             <View style={[styles.heroIcon, { backgroundColor: colors.primary }]}>
               <Ionicons color={colors.onPrimary} name="book-outline" size={28} />
@@ -197,6 +200,7 @@ export function HelpScreen() {
 
 const styles = StyleSheet.create({
   root: { flex: 1, flexDirection: 'row', minHeight: 0 },
+  mobileRoot: { flexDirection: 'column' },
   desktopIndex: { width: 280, borderRightWidth: 1, flexGrow: 0, flexShrink: 0 },
   desktopIndexContent: { padding: spacing.lg, gap: 3 },
   indexHeading: { marginBottom: spacing.md, gap: 2 },
@@ -206,8 +210,8 @@ const styles = StyleSheet.create({
   indexNumber: { width: 25, height: 25, borderRadius: radii.pill, alignItems: 'center', justifyContent: 'center' },
   indexNumberText: { fontSize: 10, fontWeight: '900' },
   indexItemText: { flex: 1, fontSize: 13, fontWeight: '700' },
-  mobileIndex: { maxHeight: 58, marginHorizontal: -spacing.md },
-  mobileIndexContent: { paddingHorizontal: spacing.md, gap: spacing.sm, alignItems: 'center' },
+  mobileIndex: { flexGrow: 0, height: 58, borderBottomWidth: 1 },
+  mobileIndexContent: { paddingHorizontal: spacing.md, paddingVertical: 9, gap: spacing.sm, alignItems: 'center' },
   indexPill: { minHeight: 38, borderWidth: 1, borderRadius: radii.pill, paddingHorizontal: 14, alignItems: 'center', justifyContent: 'center' },
   indexPillText: { fontSize: 12, fontWeight: '800' },
   mainScroll: { flex: 1 },
