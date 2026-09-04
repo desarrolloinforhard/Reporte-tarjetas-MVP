@@ -114,11 +114,11 @@ export function PwaInstallPrompt() {
             <Text style={[styles.closeText, { color: colors.text }]}>×</Text>
           </Pressable>
 
-          <View style={[styles.logoBox, { backgroundColor: colors.primarySoft }]}>
+          <View style={styles.logoBox}>
             <Image
               accessibilityLabel="Logo de Inforhard"
               resizeMode="contain"
-              source={require('../../../assets/branding/logo.png')}
+              source={require('../../../assets/branding/logo-horizontal.png')}
               style={styles.logo}
             />
           </View>
@@ -177,14 +177,14 @@ const styles = StyleSheet.create({
   },
   closeText: { fontSize: 22, lineHeight: 24 },
   logoBox: {
-    width: 66,
-    height: 66,
-    borderRadius: radii.lg,
+    width: '100%',
+    maxWidth: 260,
+    height: 52,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: spacing.sm,
   },
-  logo: { width: 52, height: 52 },
+  logo: { width: 240, height: 36 },
   title: { fontSize: 22, fontWeight: '900', textAlign: 'center' },
   description: { maxWidth: 320, fontSize: 14, lineHeight: 21, textAlign: 'center' },
   instructions: {
