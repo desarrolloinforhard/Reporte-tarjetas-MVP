@@ -1,6 +1,16 @@
 # Estado actual
 
-Última actualización: 2026-09-02.
+Última actualización: 2026-09-04.
+
+## Guía de uso integrada
+
+- La guía entregada como HTML se adaptó a una pantalla nativa y responsive
+  bajo `/ayuda`, sin ejecutar ni incrustar scripts externos.
+- Escritorio dispone de acceso en la navegación principal e índice lateral;
+  móvil dispone de acceso con el botón de ayuda del encabezado e índice
+  horizontal.
+- Sus 16 secciones funcionan con los temas claro y oscuro y permanecen
+  disponibles dentro del paquete de la PWA.
 
 ## PWA de Buen Gusto en modo consulta
 

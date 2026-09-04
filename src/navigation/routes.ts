@@ -1,5 +1,5 @@
 export type AppRoute = {
-  href: '/' | '/pagos' | '/liquidaciones' | '/conciliacion' | '/calidad' | '/configuracion';
+  href: '/' | '/pagos' | '/liquidaciones' | '/conciliacion' | '/calidad' | '/ayuda' | '/configuracion';
   label: string;
   shortLabel: string;
   icon: string;
@@ -41,6 +41,13 @@ export const appRoutes: AppRoute[] = [
     shortLabel: 'C. Datos',
     icon: 'shield-checkmark-outline',
     description: 'Alertas y diagnóstico',
+  },
+  {
+    href: '/ayuda',
+    label: 'Guía de uso',
+    shortLabel: 'Ayuda',
+    icon: 'help-circle-outline',
+    description: 'Manual y respuestas',
   },
   {
     href: '/configuracion',

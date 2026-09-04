@@ -11,6 +11,7 @@ describe('appRoutes', () => {
       '/liquidaciones',
       '/conciliacion',
       '/calidad',
+      '/ayuda',
       '/configuracion',
     ]);
   });

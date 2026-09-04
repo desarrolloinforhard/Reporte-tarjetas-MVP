@@ -172,6 +172,19 @@ export function AppShell({ children }: PropsWithChildren) {
                 <Text style={[styles.mobileCompany, { color: colors.textMuted }]}>Inforhard</Text>
               </View>
               <Pressable
+                accessibilityLabel="Abrir guía de uso"
+                accessibilityRole="button"
+                onPress={() => router.push('/ayuda' as Href)}
+                style={({ pressed }) => [
+                  styles.headerSettings,
+                  {
+                    backgroundColor: pressed ? colors.primarySoft : colors.surfaceMuted,
+                    borderColor: pathname.startsWith('/ayuda') ? colors.primary : colors.border,
+                  },
+                ]}>
+                <Ionicons color={colors.text} name="help-circle-outline" size={21} />
+              </Pressable>
+              <Pressable
                 accessibilityLabel="Abrir configuración"
                 accessibilityRole="button"
                 onPress={() => setSettingsOpen(true)}
