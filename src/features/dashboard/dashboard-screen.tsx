@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { FeedbackState } from '@/components/ui/feedback-state';
 import { appEnvironment } from '@/config/environment';
+import { completeNet, getCommissionsOverview } from '@/features/commissions/commissions.api';
 import {
   DailyPayment,
   getDailyPayments,
@@ -150,6 +151,13 @@ export function DashboardScreen() {
     queryFn: () => getDashboardData(range.from, range.to),
     refetchOnWindowFocus: false,
     staleTime: 60_000,
+  });
+  const commissionsQuery = useQuery({
+    queryKey: ['commissions-overview', range.from, range.to],
+    queryFn: () => getCommissionsOverview(range.from, range.to),
+    retry: false,
+    staleTime: 60_000,
+    refetchInterval: 60_000,
   });
   const previousMonthQuery = useQuery({
     queryKey: ['dashboard-comparison', previousRange.from, previousRange.to],
@@ -372,6 +380,34 @@ export function DashboardScreen() {
               );
             })}
           </View>
+
+          <Card
+            accessory={<Badge label="Solo lectura" tone="success" />}
+            description="Después de las comisiones configuradas; no es dinero depositado ni incluye impuestos o gastos bancarios."
+            style={{ borderColor: colors.accent }}
+            title="Neto estimado">
+            <Text style={[styles.netAmount, { color: colors.success }]}>
+              {commissionsQuery.isPending ? 'Consultando…'
+                : commissionsQuery.isError ? 'No disponible'
+                : completeNet(commissionsQuery.data) !== null
+                  ? currency(Number(completeNet(commissionsQuery.data)))
+                  : 'Incompleto'}
+            </Text>
+            <Text style={[styles.netExplanation, { color: colors.textMuted }]}>
+              {commissionsQuery.isError
+                ? 'No se pudo consultar el cálculo de comisiones. El total cobrado no reemplaza al neto.'
+                : commissionsQuery.data?.status === 'incomplete'
+                  ? commissionsQuery.data.summary.pending > 0
+                    ? `${commissionsQuery.data.summary.pending} pagos pendientes de revisión. No mostramos un total parcial como definitivo.`
+                    : 'Falta confirmar alguna fuente de datos. No mostramos un total parcial como definitivo.'
+                  : 'Calculado para las ventas del período elegido. Se consulta aproximadamente cada minuto; la acreditación puede ser posterior.'}
+            </Text>
+            <Button
+              onPress={() => router.push({ pathname: '/comisiones', params: range } as unknown as Href)}
+              variant="secondary">
+              Ver porcentajes y plazos
+            </Button>
+          </Card>
 
           {period === 'month' ? (
             <MonthComparison
@@ -771,6 +807,8 @@ const styles = StyleSheet.create({
   metric: { minHeight: 78, justifyContent: 'center', padding: spacing.md, gap: 6 },
   metricLabel: { fontSize: 10, fontWeight: '700' },
   metricValue: { fontSize: 18, fontWeight: '700' },
+  netAmount: { fontSize: 26, fontWeight: '800' },
+  netExplanation: { fontSize: 13, lineHeight: 19 },
   comparisonCard: { borderTopWidth: 4 },
   comparisonMetrics: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
   comparisonValue: {
